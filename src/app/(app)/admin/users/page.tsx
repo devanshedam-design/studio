@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,8 @@ export default function AllUsersPage() {
     const router = useRouter();
     const firestore = useFirestore();
 
-    const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(collection(firestore, 'users'));
+    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const { data: users, isLoading: usersLoading } = useCollection<UserProfile>(usersQuery);
 
     useEffect(() => {
         if (!authLoading && (!user || user.role !== 'admin' || user.email !== 'devanshedam@gmail.com')) {
