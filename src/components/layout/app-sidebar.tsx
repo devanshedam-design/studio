@@ -6,7 +6,8 @@ import {
   Home, 
   Calendar, 
   Shield,
-  LifeBuoy
+  LifeBuoy,
+  Users
 } from 'lucide-react';
 import {
   Sidebar,
@@ -35,21 +36,29 @@ const AppSidebar = () => {
 
   const { data: adminClubs, isLoading } = useCollection<Club>(adminClubsQuery);
 
-
   if (!user) return null;
+  
+  const isGlobalAdmin = user.role === 'admin' && user.email === 'devanshedam@gmail.com';
 
   const menuItems = [
     { href: '/dashboard', label: 'My Clubs', icon: Home },
     { href: '/my-events', label: 'My Events', icon: Calendar },
   ];
-
-  const adminMenuItems = adminClubs?.map(club => {
+  
+  const clubAdminItems = adminClubs?.map(club => {
     return {
       href: `/admin/clubs/${club.id}`,
       label: `${club.name} Admin`,
       icon: Shield,
     };
   }) || [];
+
+  const globalAdminItems = isGlobalAdmin ? [
+      { href: '/admin/users', label: 'User Management', icon: Users }
+  ] : [];
+
+  const adminMenuItems = [...clubAdminItems, ...globalAdminItems];
+
 
   return (
     <Sidebar>
@@ -88,7 +97,7 @@ const AppSidebar = () => {
               </Link>
             </SidebarMenuItem>
           ))}
-          {user.role === 'admin' && adminMenuItems.length > 0 && (
+          {adminMenuItems.length > 0 && (
             <>
               <SidebarSeparator />
               {adminMenuItems.map((item) => (
