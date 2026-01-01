@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, Timestamp, getDocs, addDoc, updateDoc } from 'firebase/firestore';
+import { doc, collection, query, where, Timestamp, getDocs, addDoc, updateDoc, getDoc } from 'firebase/firestore';
 import type { ClubEvent, Club, Registration } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -56,9 +56,9 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     // A better approach would be a top-level collection of registrations grouped by eventId
     const attendeesQuery = useMemoFirebase(() => {
         if (!event) return null;
-        const clubIds = ['dummyId']; // To avoid empty 'in' query error
-        const q = query(collection(firestore, 'clubMemberships'), where('clubId', 'in', clubIds));
-        return q;
+        // This is a placeholder query that does nothing useful, just to avoid errors.
+        // A real implementation would query a different collection.
+        return query(collection(firestore, 'registrations'), where('eventId', '==', event.id));
     }, [firestore, event]);
     const { data: attendees } = useCollection(attendeesQuery);
 
@@ -163,7 +163,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                             <Users className="h-6 w-6 text-primary" />
                             <div>
                                 <p className="font-semibold">Attendees</p>
-                                <p className="text-muted-foreground">Coming soon</p>
+                                <p className="text-muted-foreground">{attendees ? attendees.length : '0'}</p>
                             </div>
                         </div>
                     </div>

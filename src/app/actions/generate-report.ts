@@ -2,15 +2,29 @@
 
 import { generateEventReport } from '@/ai/flows/generate-event-report';
 import { initializeFirebase } from '@/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
 
 export async function generateReportAction(eventId: string) {
     try {
         const { firestore } = initializeFirebase();
-        const eventRef = doc(firestore, 'events', eventId);
-        const eventSnap = await getDoc(eventRef);
+        let eventRef;
+        let eventSnap;
+        let clubId;
 
-        if (!eventSnap.exists()) {
+        // Inefficient, but necessary with current data model.
+        const clubsSnapshot = await getDocs(collection(firestore, 'clubs'));
+        for (const clubDoc of clubsSnapshot.docs) {
+            const currentEventRef = doc(firestore, 'clubs', clubDoc.id, 'events', eventId);
+            const currentEventSnap = await getDoc(currentEventRef);
+            if (currentEventSnap.exists()) {
+                eventRef = currentEventRef;
+                eventSnap = currentEventSnap;
+                clubId = clubDoc.id;
+                break;
+            }
+        }
+        
+        if (!eventSnap || !eventRef || !eventSnap.exists()) {
             throw new Error('Event not found');
         }
 

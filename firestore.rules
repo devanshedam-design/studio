@@ -194,7 +194,7 @@ service cloud.firestore {
      * @principle Implements a hybrid ownership model for managing many-to-many relationships.
      */
     match /clubMemberships/{clubMembershipId} {
-      allow get, list: if true;
+      allow read: if true;
       allow create: if isSignedIn() 
                     && userIsSelf(request.resource.data)
                     && get(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)).data.status == 'approved';

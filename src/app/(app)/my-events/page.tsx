@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Ticket, Calendar, MapPin } from 'lucide-react';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where, getDocs } from 'firebase/firestore';
-import React from 'react';
+import React, { useMemo } from 'react';
 
 const QrCodeComponent = ({ eventId, userId }: { eventId: string, userId: string }) => {
     const qrData = JSON.stringify({ eventId, userId });
@@ -61,7 +61,7 @@ export default function MyEventsPage() {
     }, [firestore, user]);
     const { data: registrations, isLoading: loadingRegistrations } = useCollection<Registration>(registrationsQuery);
 
-    const eventIds = useMemoFirebase(() => registrations?.map(r => r.eventId) || [], [registrations]);
+    const eventIds = useMemo(() => registrations?.map(r => r.eventId) || [], [registrations]);
 
     React.useEffect(() => {
         const fetchEvents = async () => {
@@ -77,7 +77,7 @@ export default function MyEventsPage() {
             for (const clubDoc of clubsSnapshot.docs) {
                 const clubId = clubDoc.id;
                 // Create a query for events in this club whose ID is in our list
-                const eventsToFetch = eventIds.filter(id => myEvents.find(e => e.id === id) === undefined);
+                const eventsToFetch = eventIds.filter(id => !myEvents.some(e => e.id === id));
                 if (eventsToFetch.length > 0) {
                     const eventsQuery = query(
                         collection(firestore, 'clubs', clubId, 'events'),
@@ -93,8 +93,10 @@ export default function MyEventsPage() {
             setLoadingEvents(false);
         };
 
-        if (!loadingRegistrations) {
+        if (!loadingRegistrations && eventIds.length > 0) {
             fetchEvents();
+        } else if (!loadingRegistrations) {
+            setLoadingEvents(false);
         }
     }, [eventIds, firestore, loadingRegistrations]);
 
