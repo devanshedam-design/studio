@@ -18,11 +18,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle, FileText, Edit, Trash2, UserPlus, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where, getDocs, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, addDoc, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import type { Club, ClubEvent, ClubMembership, UserProfile } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
 function MembersTab({ clubId }: { clubId: string }) {
@@ -78,7 +78,9 @@ function MembersTab({ clubId }: { clubId: string }) {
                 clubId: clubId,
                 joinDate: serverTimestamp(),
             };
-            await addDoc(collection(firestore, 'clubMemberships'), newMembership);
+            const docRef = await addDoc(collection(firestore, 'clubMemberships'), newMembership);
+            await updateDoc(docRef, { id: docRef.id });
+
             toast({ title: 'Member added!', description: `${userToAdd.firstName} has been added to the club.` });
             setEmail('');
         } catch (e: any) {
@@ -130,10 +132,27 @@ function MembersTab({ clubId }: { clubId: string }) {
                                     <TableCell>{member.email}</TableCell>
                                     <TableCell>{member.department || 'N/A'}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(member.membershipId, `${member.firstName} ${member.lastName}`)}>
-                                            <X className="h-4 w-4 text-destructive" />
-                                            <span className="sr-only">Remove member</span>
-                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon">
+                                                    <X className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will remove {member.firstName} from the club. This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleRemoveMember(member.membershipId, `${member.firstName} ${member.lastName}`)}>
+                                                        Remove
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -151,6 +170,7 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const firestore = useFirestore();
+    const { toast } = useToast();
 
     const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', params.clubId), [firestore, params.clubId]);
     const { data: club, isLoading: clubLoading } = useDoc<Club>(clubRef);
@@ -163,6 +183,15 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
             router.push('/dashboard');
         }
     }, [user, authLoading, router, club]);
+
+    const handleDeleteEvent = async (eventId: string) => {
+        try {
+            await deleteDoc(doc(firestore, 'clubs', params.clubId, 'events', eventId));
+            toast({ title: "Event Deleted", description: "The event has been successfully removed." });
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error deleting event", description: error.message });
+        }
+    };
 
 
     if (authLoading || clubLoading || !user || !club) {
@@ -237,16 +266,32 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                                                                 </DropdownMenuItem>
                                                             </Link>
                                                             )}
-                                                            <Link href={`/events/${event.id}`}>
+                                                            <Link href={`/admin/clubs/${club.id}/events/${event.id}/edit`}>
                                                                 <DropdownMenuItem>
                                                                     <Edit className="mr-2 h-4 w-4" />
-                                                                    <span>View/Edit Event</span>
+                                                                    <span>Edit Event</span>
                                                                 </DropdownMenuItem>
                                                             </Link>
-                                                            <DropdownMenuItem className="text-destructive" disabled>
-                                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                                <span>Delete Event</span>
-                                                            </DropdownMenuItem>
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                                        <span>Delete Event</span>
+                                                                    </DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            This action cannot be undone. This will permanently delete the event and all of its associated data.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDeleteEvent(event.id)}>Delete</AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>

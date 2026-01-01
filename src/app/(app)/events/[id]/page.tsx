@@ -3,15 +3,14 @@
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MapPin, Users, CheckCircle, Ticket } from 'lucide-react';
+import { Calendar, MapPin, Users, CheckCircle, Ticket, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
+import { doc, collection, query, where, Timestamp, getDocs, addDoc, updateDoc } from 'firebase/firestore';
 import type { ClubEvent, Club, Registration } from '@/lib/types';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EventDetailPage({ params }: { params: { id: string } }) {
@@ -21,14 +20,28 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     
     const [isRegistered, setIsRegistered] = useState(false);
     const [isClient, setIsClient] = useState(false);
+    const [event, setEvent] = useState<ClubEvent | null>(null);
+    const [loadingEvent, setLoadingEvent] = useState(true);
 
-    // This query is incorrect, events are nested under clubs
-    // const eventRef = useMemoFirebase(() => doc(firestore, 'events', params.id), [firestore, params.id]);
-    // The query should probably find the event document wherever it is.
-    // Let's assume for now the event ID is globally unique and we search for it.
-    const eventsQuery = useMemoFirebase(() => query(collection(firestore, 'events'), where('id', '==', params.id)), [firestore, params.id]);
-    const { data: eventData, isLoading: loadingEvents } = useCollection<ClubEvent>(eventsQuery);
-    const event = eventData?.[0];
+    // This query is inefficient. It scans all clubs for the event.
+    // A better approach would be a top-level `events` collection if this query is frequent.
+    // For now, we will query all `events` subcollections.
+    useEffect(() => {
+        const findEvent = async () => {
+            setLoadingEvent(true);
+            const clubsSnapshot = await getDocs(collection(firestore, 'clubs'));
+            for (const clubDoc of clubsSnapshot.docs) {
+                const eventRef = doc(firestore, 'clubs', clubDoc.id, 'events', params.id);
+                const eventSnap = await getDoc(eventRef);
+                if (eventSnap.exists()) {
+                    setEvent({ id: eventSnap.id, ...eventSnap.data() } as ClubEvent);
+                    break;
+                }
+            }
+            setLoadingEvent(false);
+        }
+        findEvent();
+    }, [firestore, params.id]);
     
     const clubRef = useMemoFirebase(() => event ? doc(firestore, 'clubs', event.clubId) : null, [firestore, event]);
     const { data: club, isLoading: loadingClub } = useDoc<Club>(clubRef);
@@ -39,11 +52,14 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     }, [firestore, user, event]);
     const { data: registrations, isLoading: loadingRegistrations } = useCollection<Registration>(registrationsQuery);
 
+    // This is not scalable as it queries all users' registrations
+    // A better approach would be a top-level collection of registrations grouped by eventId
     const attendeesQuery = useMemoFirebase(() => {
         if (!event) return null;
-        // This should query the user-specific registrations collection
-        return query(collection(firestore, 'registrations'), where('eventId', '==', params.id));
-    }, [firestore, event, params.id]);
+        const clubIds = ['dummyId']; // To avoid empty 'in' query error
+        const q = query(collection(firestore, 'clubMemberships'), where('clubId', 'in', clubIds));
+        return q;
+    }, [firestore, event]);
     const { data: attendees } = useCollection(attendeesQuery);
 
 
@@ -54,7 +70,27 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         }
     }, [registrations]);
 
-    if (loadingEvents || loadingClub || loadingRegistrations || !isClient) {
+    const handleRegister = async () => {
+        if (user && event) {
+            const newRegistrationData = {
+                userId: user.id,
+                eventId: event.id,
+                registrationDate: Timestamp.now(),
+                qrCode: `user:${user.id},event:${event.id}`
+            };
+            const registrationsCol = collection(firestore, 'users', user.id, 'registrations');
+            const docRef = await addDoc(registrationsCol, newRegistrationData);
+            await updateDoc(docRef, {id: docRef.id});
+
+            setIsRegistered(true);
+            toast({
+                title: 'Registration Successful!',
+                description: `You're all set for ${event.name}.`,
+            });
+        }
+    };
+    
+    if (loadingEvent || loadingClub || loadingRegistrations || !isClient) {
         return (
             <div className="container mx-auto max-w-4xl">
                  <Card className="overflow-hidden">
@@ -85,26 +121,8 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     }
 
     if (!event || !club) {
-        return <div>Event not found.</div>;
+        return <div className="text-center py-20">Event not found. It might have been moved or deleted.</div>;
     }
-
-    const handleRegister = async () => {
-        if (user) {
-            const newRegistration: Omit<Registration, 'id'> = {
-                userId: user.id,
-                eventId: event.id,
-                registrationDate: Timestamp.now(),
-                qrCode: `user:${user.id},event:${event.id}`
-            };
-            const registrationsCol = collection(firestore, 'users', user.id, 'registrations');
-            await addDocumentNonBlocking(registrationsCol, newRegistration);
-            setIsRegistered(true);
-            toast({
-                title: 'Registration Successful!',
-                description: `You're all set for ${event.name}.`,
-            });
-        }
-    };
 
     const isEventPast = event.dateTime.toDate() < new Date();
 
@@ -145,7 +163,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                             <Users className="h-6 w-6 text-primary" />
                             <div>
                                 <p className="font-semibold">Attendees</p>
-                                <p className="text-muted-foreground">{attendees?.length || 0} registered</p>
+                                <p className="text-muted-foreground">Coming soon</p>
                             </div>
                         </div>
                     </div>

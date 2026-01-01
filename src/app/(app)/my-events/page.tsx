@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Image from 'next/image';
 import { Ticket, Calendar, MapPin } from 'lucide-react';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs } from 'firebase/firestore';
+import React from 'react';
 
 const QrCodeComponent = ({ eventId, userId }: { eventId: string, userId: string }) => {
     const qrData = JSON.stringify({ eventId, userId });
@@ -51,6 +52,8 @@ function EventPassCard({ event, userId }: { event: ClubEvent, userId: string }) 
 export default function MyEventsPage() {
     const { user } = useAuth();
     const firestore = useFirestore();
+    const [myEvents, setMyEvents] = React.useState<ClubEvent[]>([]);
+    const [loadingEvents, setLoadingEvents] = React.useState(true);
 
     const registrationsQuery = useMemoFirebase(() => {
         if (!user) return null;
@@ -59,14 +62,41 @@ export default function MyEventsPage() {
     const { data: registrations, isLoading: loadingRegistrations } = useCollection<Registration>(registrationsQuery);
 
     const eventIds = useMemoFirebase(() => registrations?.map(r => r.eventId) || [], [registrations]);
-    
-    // This query is not efficient as it queries all events. 
-    // It should query a top-level events collection.
-    const eventsQuery = useMemoFirebase(() => {
-        if (eventIds.length === 0) return null;
-        return query(collection(firestore, 'events'), where('id', 'in', eventIds));
-    }, [firestore, eventIds]);
-    const { data: myEvents, isLoading: loadingEvents } = useCollection<ClubEvent>(eventsQuery);
+
+    React.useEffect(() => {
+        const fetchEvents = async () => {
+            if (eventIds.length === 0) {
+                setMyEvents([]);
+                setLoadingEvents(false);
+                return;
+            }
+            setLoadingEvents(true);
+            const fetchedEvents: ClubEvent[] = [];
+            // This is not efficient, but required with the current data model.
+            const clubsSnapshot = await getDocs(collection(firestore, 'clubs'));
+            for (const clubDoc of clubsSnapshot.docs) {
+                const clubId = clubDoc.id;
+                // Create a query for events in this club whose ID is in our list
+                const eventsToFetch = eventIds.filter(id => myEvents.find(e => e.id === id) === undefined);
+                if (eventsToFetch.length > 0) {
+                    const eventsQuery = query(
+                        collection(firestore, 'clubs', clubId, 'events'),
+                        where('id', 'in', eventsToFetch)
+                    );
+                    const eventsSnapshot = await getDocs(eventsQuery);
+                    eventsSnapshot.forEach(eventDoc => {
+                        fetchedEvents.push({ id: eventDoc.id, ...eventDoc.data() } as ClubEvent);
+                    });
+                }
+            }
+            setMyEvents(fetchedEvents);
+            setLoadingEvents(false);
+        };
+
+        if (!loadingRegistrations) {
+            fetchEvents();
+        }
+    }, [eventIds, firestore, loadingRegistrations]);
 
 
     if (loadingRegistrations || loadingEvents) {

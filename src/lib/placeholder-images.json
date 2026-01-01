@@ -1,3 +1,40 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "club-1",
+      "description": "Abstract geometric pattern for a tech club",
+      "imageUrl": "https://images.unsplash.com/photo-1709626011485-6fe000ea2dbc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGdlb21ldHJpY3xlbnwwfHx8fDE3NjcyNzE3ODR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract geometric"
+    },
+    {
+      "id": "club-2",
+      "description": "Books and coffee for a literature society",
+      "imageUrl": "https://images.unsplash.com/photo-1622266362405-725d8b7975c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxib29rcyUyMGNvZmZlZXxlbnwwfHx8fDE3NjcyODM5OTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "books coffee"
+    },
+    {
+      "id": "club-3",
+      "description": "Camera and photographs for a photography club",
+      "imageUrl": "https://images.unsplash.com/photo-1588420635201-3a9e2a2a0a07?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjYW1lcmElMjBwaG90b2dyYXBoeXxlbnwwfHx8fDE3NjcxOTM2NTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "camera photography"
+    },
+    {
+      "id": "event-1",
+      "description": "Crowd at a concert for a music event",
+      "imageUrl": "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjb25jZXJ0JTIwY3Jvd2R8ZW58MHx8fHwxNzY3MTg4OTU4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "concert crowd"
+    },
+    {
+      "id": "event-2",
+      "description": "People networking at a professional event",
+      "imageUrl": "https://images.unsplash.com/photo-1560439514-4e9645039924?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxidXNpbmVzcyUyMG5ldHdvcmtpbmd8ZW58MHx8fHwxNzY3MjI3MjAxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "business networking"
+    },
+    {
+      "id": "event-3",
+      "description": "Team working on a project for a hackathon",
+      "imageUrl": "https://images.unsplash.com/photo-1492366254240-43affaefc3e3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx0ZWFtJTIwY29sbGFib3JhdGlvbnxlbnwwfHx8fDE3NjcyMDAyOTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "team collaboration"
+    }
+  ]
 }
