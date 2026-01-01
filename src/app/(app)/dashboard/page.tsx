@@ -76,14 +76,26 @@ export default function ProfilePage() {
         return <div>Loading profile...</div>;
     }
     
-    const years = [1, 2, 3, 4, 5];
-    const departments = ["Computer Science", "Engineering", "Business", "Arts & Sciences", "Medicine", "Law"];
+    const years = [1, 2, 3, 4];
+    const departments = [
+        "Computer Science and Engineering (CSE)",
+        "CSE (Artificial Intelligence & Machine Learning)",
+        "CSE (Cyber Security)",
+        "CSE (Data Science)",
+        "Information Technology (IT)",
+        "Computer Science and Information Technology",
+        "Aeronautical Engineering",
+        "Electronics and Communication Engineering (ECE)",
+        "Electrical and Electronics Engineering (EEE)",
+        "Mechanical Engineering",
+        "Civil Engineering",
+    ];
 
     return (
         <div className="container mx-auto max-w-2xl">
             <Card>
                 <CardHeader>
-                    <CardTitle>My Profile</CardTitle>
+                    <CardTitle className="text-2xl md:text-3xl">My Profile</CardTitle>
                     <CardDescription>View and edit your personal information.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -156,7 +168,7 @@ export default function ProfilePage() {
                                     name="year"
                                     render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Year</FormLabel>
+                                        <FormLabel>Year of Study</FormLabel>
                                         <Select onValueChange={(val) => field.onChange(Number(val))} defaultValue={String(field.value)}>
                                         <FormControl>
                                             <SelectTrigger>

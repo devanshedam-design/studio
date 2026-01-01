@@ -58,40 +58,43 @@ export default function AllUsersPage() {
                             placeholder="Search by name or email..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
+                            className="max-w-sm"
                         />
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Department</TableHead>
-                                <TableHead>Year</TableHead>
-                                <TableHead>Role</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {usersLoading ? (
-                                <TableRow><TableCell colSpan={5} className="text-center h-24">Loading users...</TableCell></TableRow>
-                            ) : filteredUsers.length > 0 ? (
-                                filteredUsers.map(u => (
-                                    <TableRow key={u.id}>
-                                        <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
-                                        <TableCell>{u.email}</TableCell>
-                                        <TableCell>{u.department || 'N/A'}</TableCell>
-                                        <TableCell>{u.year || 'N/A'}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={u.role === 'admin' ? 'destructive' : 'secondary'}>{u.role}</Badge>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={5} className="text-center h-24">No users found.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Department</TableHead>
+                                    <TableHead>Year</TableHead>
+                                    <TableHead>Role</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {usersLoading ? (
+                                    <TableRow><TableCell colSpan={5} className="text-center h-24">Loading users...</TableCell></TableRow>
+                                ) : filteredUsers.length > 0 ? (
+                                    filteredUsers.map(u => (
+                                        <TableRow key={u.id}>
+                                            <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
+                                            <TableCell>{u.email}</TableCell>
+                                            <TableCell className="min-w-[200px]">{u.department || 'N/A'}</TableCell>
+                                            <TableCell>{u.year || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={u.role === 'admin' ? 'destructive' : 'secondary'}>{u.role}</Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={5} className="text-center h-24">No users found.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </div>
