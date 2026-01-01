@@ -10,11 +10,11 @@
  * - `/clubMemberships`: A top-level collection managing the many-to-many relationship between users and clubs.
  *
  * ## Key Security Decisions
- * - **User Data Privacy**: All data under `/users/{userId}` is strictly private. Users cannot see or list other users' profiles or registrations.
+ * - **User Data Privacy**: All data under `/users/{userId}` is strictly private. Users cannot see or list other users' profiles or registrations, except for the global admin.
  * - **Club Admin Authority**: A user whose UID is stored in a club's `adminId` field has full control over that club document and all nested documents (events, reports). This avoids the need for custom claims.
- * - **Global Admin**: A specific email address is granted global admin privileges, allowing bypass of standard ownership checks for administrative purposes.
- * - **Public Discoverability**: Core information in `/clubs` and `/clubs/{clubId}/events` is publicly readable to allow users to browse and discover clubs and events before joining or registering.
- * - **Denormalization for Authorization**: Authorization decisions rely on data stored directly on the documents being secured (e.g., the `adminId` on a club document). This approach is fast, cost-effective, and avoids complex, non-performant `get` calls in most rules. Necessary `get` calls are used judiciously to check for club admin status when securing subcollections.
+ * - **Global Admin**: A specific email address is granted global admin privileges, allowing bypass of standard ownership checks and management of club statuses.
+ * - **Public Discoverability via Approval**: Only clubs with a `status` of 'approved' are publicly readable. This creates an admin approval workflow for new clubs.
+ * - **Denormalization for Authorization**: Authorization decisions rely on data stored directly on the documents being secured (e.g., the `adminId` on a club document). This approach is fast, cost-effective, and avoids complex, non-performant `get` calls in most rules.
  *
  */
 rules_version = '2';
@@ -130,17 +130,27 @@ service cloud.firestore {
     // ---------------------------------------------------------------------
 
     /**
-     * @description Clubs are publicly readable, but only manageable by their designated admin.
+     * @description Clubs are publicly readable if 'approved', but only manageable by their designated admin or a global admin.
      * @path /clubs/{clubId}
-     * @allow (get) any user (signed in or not) to read a club's details.
-     * @deny (update) a user who is not the admin listed in the `adminId` field.
-     * @principle Implements public-read with owner-only writes.
+     * @allow (read) any user to read a club's details if its status is 'approved'.
+     * @allow (list) any user to list all 'approved' clubs.
+     * @deny (update) a user who is not the club admin or a global admin.
+     * @principle Implements an admin approval workflow for public visibility.
      */
     match /clubs/{clubId} {
-      allow get, list: if true;
-      allow create: if isSignedIn() && (request.resource.data.adminId == request.auth.uid || isAdmin());
-      allow update: if (isOwner(resource.data.adminId) || isAdmin()) && resource != null;
-      allow delete: if (isOwner(resource.data.adminId) || isAdmin()) && resource != null;
+      allow get: if resource.data.status == 'approved' || isOwner(resource.data.adminId) || isAdmin();
+      allow list: if isAdmin(); // Global admin can see all clubs for approval. Let client-side handle filtering.
+      
+      allow create: if isSignedIn() 
+                    && request.resource.data.adminId == request.auth.uid 
+                    && request.resource.data.status == 'pending';
+                    
+      allow update: if (isOwner(resource.data.adminId) || isAdmin()) 
+                    // Club admin can only update specific fields, not status
+                    && request.resource.data.keys().diff(resource.data.keys()).hasOnly(['name', 'description', 'logoUrl'])
+                    || isAdmin(); // Admin can update anything.
+                    
+      allow delete: if (isOwner(resource.data.adminId) || isAdmin());
       
       /**
        * @description Events are publicly readable, but managed by the parent club's admin.
@@ -150,7 +160,7 @@ service cloud.firestore {
        * @principle Inherits authorization from the parent document via a `get()` call.
        */
       match /events/{eventId} {
-        allow get, list: if true;
+        allow get, list: if get(/databases/$(database)/documents/clubs/$(clubId)).data.status == 'approved' || isClubAdmin(clubId) || isAdmin();
         allow create: if isClubAdmin(clubId) || isAdmin();
         allow update: if isExistingClubAdmin(clubId) || isAdmin();
         allow delete: if isExistingClubAdmin(clubId) || isAdmin();
@@ -176,16 +186,18 @@ service cloud.firestore {
     // ---------------------------------------------------------------------
 
     /**
-     * @description Users can join/leave clubs. Club admins can remove members from their club.
+     * @description Users can join/leave approved clubs. Club admins can remove members from their club.
      * @path /clubMemberships/{clubMembershipId}
-     * @allow (create) a signed-in user to create a membership for themselves.
+     * @allow (create) a signed-in user to create a membership for themselves in an 'approved' club.
      * @deny (create) a user from creating a membership document for another user.
      _ @deny (delete) a user from deleting another user's membership unless they are a club admin.
      * @principle Implements a hybrid ownership model for managing many-to-many relationships.
      */
     match /clubMemberships/{clubMembershipId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && userIsSelf(request.resource.data);
+      allow create: if isSignedIn() 
+                    && userIsSelf(request.resource.data)
+                    && get(/databases/$(database)/documents/clubs/$(request.resource.data.clubId)).data.status == 'approved';
       allow update: if false; // Memberships should be created/deleted, not updated.
       allow delete: if resource != null && (isOwner(resource.data.userId) || isClubAdmin(resource.data.clubId) || isAdmin());
     }

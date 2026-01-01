@@ -55,7 +55,7 @@ export default function ExploreClubsPage() {
     const { user, loading: authLoading } = useAuth();
     const firestore = useFirestore();
 
-    const clubsQuery = useMemoFirebase(() => collection(firestore, 'clubs'), [firestore]);
+    const clubsQuery = useMemoFirebase(() => query(collection(firestore, 'clubs'), where('status', '==', 'approved')), [firestore]);
     const { data: clubs, isLoading: loadingClubs } = useCollection<Club>(clubsQuery);
 
     const membershipsQuery = useMemoFirebase(() => {
@@ -120,9 +120,9 @@ export default function ExploreClubsPage() {
             ) : (
                 <div className="text-center py-16 border-2 border-dashed rounded-lg bg-card flex flex-col items-center justify-center">
                     <Building className="mx-auto h-16 w-16 text-muted-foreground" />
-                    <h3 className="mt-6 text-xl font-medium">No Clubs Found</h3>
+                    <h3 className="mt-6 text-xl font-medium">No Approved Clubs Found</h3>
                     <p className="mt-2 text-base text-muted-foreground">
-                       Be the first to create a club!
+                       There are no approved clubs to show right now. Check back later!
                     </p>
                     <Link href="/clubs/create" className="mt-6">
                         <Button>

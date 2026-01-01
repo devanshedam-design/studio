@@ -19,6 +19,7 @@ export type Club = {
   description: string;
   adminId: string;
   logoUrl: string;
+  status: 'pending' | 'approved' | 'rejected';
 };
 
 export type ClubWithMembership = Club & { isMember: boolean; isAdmin: boolean; };

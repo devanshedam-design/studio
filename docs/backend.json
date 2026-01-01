@@ -66,13 +66,19 @@
         "adminId": {
           "type": "string",
           "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Club) Represents the admin of the club."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "approved", "rejected"],
+          "description": "The approval status of the club."
         }
       },
       "required": [
         "id",
         "name",
         "description",
-        "adminId"
+        "adminId",
+        "status"
       ]
     },
     "Event": {

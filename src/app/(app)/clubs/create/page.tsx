@@ -40,7 +40,7 @@ export default function CreateClubPage() {
         try {
             const batch = writeBatch(firestore);
             
-            // 1. Create new Club
+            // 1. Create new Club with 'pending' status
             const newClubRef = doc(collection(firestore, 'clubs'));
             const clubId = newClubRef.id;
             const logoUrl = PlaceHolderImages.find(p => p.id === 'club-1')?.imageUrl || `https://picsum.photos/seed/${clubId}/600/400`;
@@ -48,30 +48,25 @@ export default function CreateClubPage() {
                 id: clubId,
                 adminId: user.id,
                 logoUrl,
+                status: 'pending',
                 ...values,
             });
 
-            // 2. Update User's adminOf array
+            // 2. Update User's adminOf array - this gives them admin rights immediately
             const userRef = doc(firestore, 'users', user.id);
             const newAdminOf = [...user.adminOf, clubId];
             batch.update(userRef, { adminOf: newAdminOf });
-
-            // 3. Create initial ClubMembership for the admin
-            const membershipRef = doc(collection(firestore, 'clubMemberships'));
-            batch.set(membershipRef, {
-                id: membershipRef.id,
-                clubId: clubId,
-                userId: user.id,
-                joinDate: serverTimestamp(),
-            });
+            
+            // User does not auto-join as a member until approved.
+            // Admin can see the club in their admin list.
 
             await batch.commit();
 
             toast({
-                title: 'Club Created!',
-                description: `"${values.name}" is now ready.`,
+                title: 'Club Submitted for Approval!',
+                description: `"${values.name}" is now pending review from an administrator.`,
             });
-            router.push(`/admin/clubs/${clubId}`);
+            router.push(`/dashboard`);
 
         } catch (error: any) {
             console.error("Error creating club: ", error);
@@ -87,8 +82,8 @@ export default function CreateClubPage() {
         <div className="container mx-auto max-w-2xl">
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-3xl">Create a New Club</CardTitle>
-                    <CardDescription>Fill out the form below to get your club up and running.</CardDescription>
+                    <CardTitle className="text-3xl">Propose a New Club</CardTitle>
+                    <CardDescription>Fill out the form below to submit your club for admin approval.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
@@ -126,7 +121,7 @@ export default function CreateClubPage() {
                             />
                             <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
                                 {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Create Club
+                                Submit for Approval
                             </Button>
                         </form>
                     </Form>

@@ -8,7 +8,8 @@ import {
   Shield,
   LifeBuoy,
   Users,
-  Compass
+  Compass,
+  CheckSquare
 } from 'lucide-react';
 import {
   Sidebar,
@@ -56,7 +57,8 @@ const AppSidebar = () => {
   }) || [];
 
   const globalAdminItems = isGlobalAdmin ? [
-      { href: '/admin/users', label: 'User Management', icon: Users }
+      { href: '/admin/users', label: 'User Management', icon: Users },
+      { href: '/admin/approvals', label: 'Club Approvals', icon: CheckSquare }
   ] : [];
 
   const adminMenuItems = [...clubAdminItems, ...globalAdminItems];
@@ -89,7 +91,7 @@ const AppSidebar = () => {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
+              <Link href={item.href} passHref>
                 <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
                     <div>
                         <item.icon />
@@ -104,7 +106,7 @@ const AppSidebar = () => {
               <SidebarSeparator />
               {adminMenuItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                   <Link href={item.href}>
+                   <Link href={item.href} passHref>
                     <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
                       <div>
                         <item.icon />
