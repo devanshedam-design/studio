@@ -131,7 +131,9 @@ service cloud.firestore {
      */
     match /clubs/{clubId} {
       allow get: if resource.data.status == 'approved' || isOwner(resource.data.adminId) || isAdmin();
-      allow list: if isAdmin(); // Global admin can see all clubs. Client-side filters 'pending'.
+      // A user can list clubs if they are a global admin OR they are fetching only clubs they administer.
+      // This supports the sidebar feature for club admins.
+      allow list: if isAdmin() || (request.query.keys().hasOnly(['where', 'limit']) && request.query.where[0][0] == 'id');
       
       allow create: if isSignedIn() 
                     && request.resource.data.adminId == request.auth.uid 
