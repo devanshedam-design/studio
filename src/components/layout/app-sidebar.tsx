@@ -70,12 +70,12 @@ const AppSidebar = () => {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref legacyBehavior>
+              <Link href={item.href} passHref>
                 <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
-                  <a>
+                  <>
                     <item.icon />
                     <span>{item.label}</span>
-                  </a>
+                  </>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -85,12 +85,12 @@ const AppSidebar = () => {
               <SidebarSeparator />
               {adminMenuItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <Link href={item.href} passHref legacyBehavior>
+                  <Link href={item.href} passHref>
                     <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
-                      <a>
+                      <>
                         <item.icon />
                         <span>{item.label}</span>
-                      </a>
+                      </>
                     </SidebarMenuButton>
                   </Link>
                 </SidebarMenuItem>
