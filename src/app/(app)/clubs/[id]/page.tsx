@@ -103,7 +103,7 @@ function EventList({ clubId }: { clubId: string }) {
 
 
 export default function ClubDetailPage({ params }: { params: { id: string } }) {
-    const { id } = params;
+    const { id: clubId } = params;
     const { user, loading: authLoading } = useAuth();
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -112,7 +112,7 @@ export default function ClubDetailPage({ params }: { params: { id: string } }) {
     const [membershipId, setMembershipId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', id), [firestore, id]);
+    const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', clubId), [firestore, clubId]);
     const { data: club, isLoading: clubLoading } = useDoc<Club>(clubRef);
 
     const membershipQuery = useMemoFirebase(() => {
