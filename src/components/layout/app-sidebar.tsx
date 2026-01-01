@@ -19,29 +19,37 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/auth-context';
-import { mockDB } from '@/lib/data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import type { Club } from '@/lib/types';
 
 const AppSidebar = () => {
   const pathname = usePathname();
   const { user } = useAuth();
+  const firestore = useFirestore();
+
+  const adminClubsQuery = useMemoFirebase(() => {
+    if (!user || !user.adminOf || user.adminOf.length === 0) return null;
+    return query(collection(firestore, 'clubs'), where('id', 'in', user.adminOf));
+  }, [firestore, user]);
+
+  const { data: adminClubs, isLoading } = useCollection<Club>(adminClubsQuery);
+
 
   if (!user) return null;
-
-  const isAdmin = user.role === 'admin';
 
   const menuItems = [
     { href: '/dashboard', label: 'My Clubs', icon: Home },
     { href: '/my-events', label: 'My Events', icon: Calendar },
   ];
 
-  const adminMenuItems = user.adminOf.map(clubId => {
-    const club = mockDB.clubs.find(clubId);
+  const adminMenuItems = adminClubs?.map(club => {
     return {
-      href: `/admin/clubs/${clubId}`,
-      label: club ? `${club.name} Admin` : 'Admin Panel',
+      href: `/admin/clubs/${club.id}`,
+      label: `${club.name} Admin`,
       icon: Shield,
     };
-  });
+  }) || [];
 
   return (
     <Sidebar>
@@ -70,22 +78,22 @@ const AppSidebar = () => {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
+              <Link href={item.href} passHref>
                 <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={item.label}>
-                  <div>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </div>
+                    <div>
+                        <item.icon />
+                        <span>{item.label}</span>
+                    </div>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
           ))}
-          {isAdmin && adminMenuItems.length > 0 && (
+          {user.role === 'admin' && adminMenuItems.length > 0 && (
             <>
               <SidebarSeparator />
               {adminMenuItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <Link href={item.href}>
+                  <Link href={item.href} passHref>
                     <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)} tooltip={item.label}>
                       <div>
                         <item.icon />

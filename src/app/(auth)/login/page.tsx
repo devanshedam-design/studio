@@ -24,8 +24,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/auth-context';
-import { mockDB } from '@/lib/data';
+import { useAuth } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address.'),
@@ -37,32 +37,31 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { signIn } = useAuth();
+  const auth = useAuth();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
-      password: 'password', // Default mock password
+      password: '',
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    const user = mockDB.users.findByEmail(data.email);
-    if (user) {
-      signIn(data.email);
+  const onSubmit = async (data: LoginFormValues) => {
+    try {
+      await signInWithEmailAndPassword(auth, data.email, data.password);
       toast({
         title: 'Login Successful',
-        description: `Welcome back, ${user.name}!`,
+        description: `Welcome back!`,
       });
       router.push('/dashboard');
-    } else {
+    } catch (error: any) {
+      console.error(error);
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: 'No user found with that email. Check the hint below.',
+        description: error.message || 'An unexpected error occurred.',
       });
-      form.setError('email', { message: 'User not found.' });
     }
   };
 
@@ -71,7 +70,7 @@ export default function LoginPage() {
       <CardHeader>
         <CardTitle className="text-2xl">Login</CardTitle>
         <CardDescription>
-          Enter your email below to login to your account.
+          Enter your email and password to access your account.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -112,16 +111,15 @@ export default function LoginPage() {
             >
               {form.formState.isSubmitting ? 'Logging in...' : 'Login'}
             </Button>
-            <Button variant="outline" className="w-full" type="button" disabled>
-              Login with Google
-            </Button>
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="text-sm text-center block">
-         <p className="text-muted-foreground mt-4">
-            Hint: Use a pre-configured email like <br /> <span className="font-mono text-primary">alice@example.com</span> (student) or <span className="font-mono text-primary">bob@example.com</span> (admin).
-            Any password will work.
+      <CardFooter className="text-sm text-center flex-col items-center">
+         <p className="text-muted-foreground">
+            Don&apos;t have an account?{' '}
+            <Link href="/signup" className="text-primary hover:underline">
+                Sign up
+            </Link>
         </p>
       </CardFooter>
     </Card>

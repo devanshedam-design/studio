@@ -1,6 +1,5 @@
 'use client';
 
-import { mockDB } from '@/lib/data';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,30 +8,62 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
+import type { ClubEvent, Club, Registration } from '@/lib/types';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function EventDetailPage({ params }: { params: { id: string } }) {
     const { user } = useAuth();
+    const firestore = useFirestore();
     const { toast } = useToast();
-    const event = mockDB.events.find(params.id);
-    const club = event ? mockDB.clubs.find(event.clubId) : undefined;
     
     const [isRegistered, setIsRegistered] = useState(false);
     const [isClient, setIsClient] = useState(false);
 
+    const eventRef = useMemoFirebase(() => doc(firestore, 'events', params.id), [firestore, params.id]);
+    const { data: event, isLoading: loadingEvent } = useDoc<ClubEvent>(eventRef);
+    
+    const clubRef = useMemoFirebase(() => event ? doc(firestore, 'clubs', event.clubId) : null, [firestore, event]);
+    const { data: club, isLoading: loadingClub } = useDoc<Club>(clubRef);
+
+    const registrationsQuery = useMemoFirebase(() => {
+        if (!user || !event) return null;
+        return query(collection(firestore, 'registrations'), where('userId', '==', user.id), where('eventId', '==', event.id));
+    }, [firestore, user, event]);
+    const { data: registrations, isLoading: loadingRegistrations } = useCollection<Registration>(registrationsQuery);
+
+    const attendeesQuery = useMemoFirebase(() => {
+        if (!event) return null;
+        return collection(firestore, 'registrations');
+    }, [firestore, event]);
+    const { data: attendees } = useCollection(query(attendeesQuery!, where('eventId', '==', params.id)));
+
     useEffect(() => {
         setIsClient(true);
-        if (user && event) {
-            setIsRegistered(mockDB.registrations.isRegistered(user.id, event.id));
+        if (registrations) {
+            setIsRegistered(registrations.length > 0);
         }
-    }, [user, event]);
+    }, [registrations]);
+
+    if (loadingEvent || loadingClub || loadingRegistrations) {
+        return <div>Loading...</div>;
+    }
 
     if (!event || !club) {
         return <div>Event not found.</div>;
     }
 
-    const handleRegister = () => {
+    const handleRegister = async () => {
         if (user) {
-            mockDB.registrations.register(user.id, event.id);
+            const newRegistration: Omit<Registration, 'id'> = {
+                userId: user.id,
+                eventId: event.id,
+                registrationDate: Timestamp.now(),
+                qrCode: `user:${user.id},event:${event.id}` // Simplified QR data
+            };
+            const registrationsCol = collection(firestore, 'users', user.id, 'registrations');
+            await addDocumentNonBlocking(registrationsCol, newRegistration);
             setIsRegistered(true);
             toast({
                 title: 'Registration Successful!',
@@ -41,19 +72,19 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         }
     };
 
-    const isEventPast = new Date(event.date) < new Date();
+    const isEventPast = event.dateTime.toDate() < new Date();
 
     return (
         <div className="container mx-auto max-w-4xl">
             <Card className="overflow-hidden">
                 <div className="relative h-60 w-full">
-                    <Image
+                    {/* <Image
                         src={event.bannerUrl}
                         alt={`${event.name} banner`}
                         fill
                         className="object-cover"
                         data-ai-hint="event banner"
-                    />
+                    /> */}
                     <div className="absolute inset-0 bg-black/40" />
                 </div>
                 <CardHeader className="relative -mt-16 z-10 p-4 md:p-6">
@@ -66,7 +97,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                             <Calendar className="h-5 w-5 text-primary" />
                             <div>
                                 <p className="font-semibold">Date & Time</p>
-                                <p>{new Date(event.date).toLocaleString()}</p>
+                                <p>{event.dateTime.toDate().toLocaleString()}</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 p-3 rounded-md bg-secondary">
@@ -80,7 +111,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                             <Users className="h-5 w-5 text-primary" />
                             <div>
                                 <p className="font-semibold">Attendees</p>
-                                <p>{event.attendees.length} registered</p>
+                                <p>{attendees?.length || 0} registered</p>
                             </div>
                         </div>
                     </div>

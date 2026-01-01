@@ -1,24 +1,26 @@
 'use server';
 
 import { generateEventReport } from '@/ai/flows/generate-event-report';
-import { mockDB } from '@/lib/data';
+import { initializeFirebase } from '@/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 export async function generateReportAction(eventId: string) {
     try {
-        const event = mockDB.events.find(eventId);
-        if (!event) {
+        const { firestore } = initializeFirebase();
+        const eventRef = doc(firestore, 'events', eventId);
+        const eventSnap = await getDoc(eventRef);
+
+        if (!eventSnap.exists()) {
             throw new Error('Event not found');
         }
 
         const aiInput = {
-            eventId: event.id,
+            eventId: eventId,
         };
 
         const result = await generateEventReport(aiInput);
 
-        // In a real app, you'd save this to your database.
-        // For this mock, we'll just update the in-memory object.
-        event.report = result.report;
+        await updateDoc(eventRef, { report: result.report });
 
         return { success: true, report: result.report };
     } catch (error) {

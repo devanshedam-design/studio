@@ -180,7 +180,7 @@ service cloud.firestore {
      * @path /clubMemberships/{clubMembershipId}
      * @allow (create) a signed-in user to create a membership for themselves.
      * @deny (create) a user from creating a membership document for another user.
-     * @deny (delete) a user from deleting another user's membership unless they are a club admin.
+     _ @deny (delete) a user from deleting another user's membership unless they are a club admin.
      * @principle Implements a hybrid ownership model for managing many-to-many relationships.
      */
     match /clubMemberships/{clubMembershipId} {

@@ -1,22 +1,31 @@
 'use client';
 import { useState } from 'react';
-import { mockDB } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { generateReportAction } from '@/app/actions/generate-report';
 import { Bot, Download, Loader2 } from 'lucide-react';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { ClubEvent } from '@/lib/types';
 
-export default function ReportPage({ params }: { params: { eventId: string } }) {
-    const event = mockDB.events.find(params.eventId);
+export default function ReportPage({ params }: { params: { clubId: string, eventId: string } }) {
+    const firestore = useFirestore();
+    const eventRef = useMemoFirebase(() => doc(firestore, 'clubs', params.clubId, 'events', params.eventId), [firestore, params]);
+    const { data: event, isLoading: eventLoading } = useDoc<ClubEvent>(eventRef);
+
     const [report, setReport] = useState<string | undefined>(event?.report);
     const [isLoading, setIsLoading] = useState(false);
     const { toast } = useToast();
 
+    if (eventLoading) {
+        return <div>Loading...</div>
+    }
+
     if (!event) {
         return <div>Event not found</div>;
     }
-
+     
     const handleGenerateReport = async () => {
         setIsLoading(true);
         const result = await generateReportAction(params.eventId);

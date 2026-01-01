@@ -30,13 +30,19 @@
         "year": {
           "type": "number",
           "description": "Year of study (e.g., 1, 2, 3, 4)."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["student", "admin"],
+          "description": "The role of the user."
         }
       },
       "required": [
         "id",
         "email",
         "firstName",
-        "lastName"
+        "lastName",
+        "role"
       ]
     },
     "Club": {
@@ -227,8 +233,7 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {

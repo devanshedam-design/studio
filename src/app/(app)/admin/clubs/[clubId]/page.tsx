@@ -1,6 +1,5 @@
 'use client';
 import { useAuth } from '@/contexts/auth-context';
-import { mockDB } from '@/lib/data';
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,21 +16,29 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, FileText, Edit, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { Club, ClubEvent } from '@/lib/types';
 
 export default function AdminClubPage({ params }: { params: { clubId: string } }) {
-    const { user, loading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+    const firestore = useFirestore();
+
+    const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', params.clubId), [firestore, params.clubId]);
+    const { data: club, isLoading: clubLoading } = useDoc<Club>(clubRef);
+    
+    const eventsQuery = useMemoFirebase(() => query(collection(firestore, 'clubs', params.clubId, 'events')), [firestore, params.clubId]);
+    const { data: events, isLoading: eventsLoading } = useCollection<ClubEvent>(eventsQuery);
 
     useEffect(() => {
-        if (!loading && user && !user.adminOf.includes(params.clubId)) {
+        if (!authLoading && user && club && user.id !== club.adminId) {
             router.push('/dashboard');
         }
-    }, [user, loading, router, params.clubId]);
+    }, [user, authLoading, router, club]);
 
-    const club = mockDB.clubs.find(params.clubId);
-    const events = mockDB.events.findByClub(params.clubId);
 
-    if (loading || !user || !club || !user.adminOf.includes(params.clubId)) {
+    if (authLoading || clubLoading || eventsLoading || !user || !club) {
         return <div className="flex h-64 items-center justify-center">Loading or unauthorized...</div>;
     }
 
@@ -42,10 +49,12 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                     <h1 className="text-3xl font-bold tracking-tight">Admin: {club.name}</h1>
                     <p className="text-muted-foreground">Manage your club's events and reports.</p>
                 </div>
-                <Button disabled>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create Event
-                </Button>
+                <Link href={`/admin/clubs/${club.id}/events/create`}>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create Event
+                    </Button>
+                </Link>
             </div>
             
             <Card>
@@ -65,16 +74,16 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {events.map(event => {
-                                const isPast = new Date(event.date) < new Date();
+                            {events?.map(event => {
+                                const isPast = event.dateTime.toDate() < new Date();
                                 return (
                                 <TableRow key={event.id}>
                                     <TableCell className="font-medium">{event.name}</TableCell>
-                                    <TableCell>{new Date(event.date).toLocaleDateString()}</TableCell>
+                                    <TableCell>{event.dateTime.toDate().toLocaleDateString()}</TableCell>
                                     <TableCell>
                                         <Badge variant={isPast ? 'outline' : 'default'}>{isPast ? 'Past' : 'Upcoming'}</Badge>
                                     </TableCell>
-                                    <TableCell>{event.attendees.length}</TableCell>
+                                    <TableCell>{/* Attendees count would need another query */}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>

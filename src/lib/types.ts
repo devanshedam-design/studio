@@ -1,46 +1,56 @@
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  avatarUrl: string;
-  role: 'student' | 'admin';
-  year?: number;
-  department?: string;
-  clubs: string[]; // array of club IDs
-  adminOf: string[]; // array of club IDs if admin
+import type { Timestamp } from 'firebase/firestore';
+
+export type UserProfile = {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    department?: string;
+    year?: number;
+    role: 'student' | 'admin';
+    adminOf: string[]; // List of clubIds
 };
 
 export type Club = {
   id: string;
   name:string;
   description: string;
-  logoUrl: string;
-  members: string[]; // array of user IDs
-  admins: string[]; // array of user IDs
+  adminId: string;
+  // logoUrl: string;
 };
+
+export type ClubWithMembership = Club & { isMember: boolean; isAdmin: boolean; };
 
 export type ClubEvent = {
   id: string;
   clubId: string;
   name: string;
   description: string;
-  date: string; // ISO string
+  dateTime: Timestamp;
   location: string;
-  bannerUrl: string;
-  attendees: string[]; // array of user IDs
+  // bannerUrl: string;
   report?: string;
 };
+
+export type Registration = {
+  id: string;
+  userId: string;
+  eventId: string;
+  registrationDate: Timestamp;
+  qrCode: string;
+};
+
+export type ClubMembership = {
+  id: string;
+  userId: string;
+  clubId: string;
+  joinDate: Timestamp;
+}
 
 export type Announcement = {
   id: string;
   clubId: string;
   title: string;
   content: string;
-  createdAt: string; // ISO string
-};
-
-export type Registration = {
-  userId: string;
-  eventId: string;
-  registeredAt: string; // ISO string
+  createdAt: Timestamp;
 };

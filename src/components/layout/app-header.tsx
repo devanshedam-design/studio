@@ -23,31 +23,36 @@ const AppHeader = () => {
   const { user, signOut } = useAuth();
   const router = useRouter();
 
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    await signOut();
     router.push('/login');
   };
+  
+  const getInitials = (firstName?: string, lastName?: string) => {
+    if (!firstName || !lastName) return 'U';
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  }
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b bg-background/80 px-4 backdrop-blur-sm md:px-6">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="md:hidden" />
-        <h1 className="text-xl font-semibold hidden md:block">Welcome, {user?.name.split(' ')[0]}!</h1>
+        <h1 className="text-xl font-semibold hidden md:block">Welcome, {user?.firstName}!</h1>
       </div>
       
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-10 w-10 rounded-full">
             <Avatar className="h-10 w-10">
-              <AvatarImage src={user?.avatarUrl} alt={user?.name} />
-              <AvatarFallback>{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
+              {/* <AvatarImage src={user?.avatarUrl} alt={user?.firstName} /> */}
+              <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user?.name}</p>
+              <p className="text-sm font-medium leading-none">{user?.firstName} {user?.lastName}</p>
               <p className="text-xs leading-none text-muted-foreground">
                 {user?.email}
               </p>
