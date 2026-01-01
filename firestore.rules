@@ -95,7 +95,7 @@ service cloud.firestore {
     // ---------------------------------------------------------------------
 
     /**
-     * @description A user can manage their own profile, but not see others.
+     * @description A user can manage their own profile, but not see others. Admins can list all users.
      * @path /users/{userId}
      * @allow (create) a user with UID 'user123' to create their own profile at `/users/user123`.
      * @deny (get) a user with UID 'user456' from reading `/users/user123`.
@@ -103,7 +103,7 @@ service cloud.firestore {
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
-      allow list: if false; // Disallow listing of all user profiles for privacy.
+      allow list: if isAdmin();
       allow create: if isOwner(userId) && request.resource.data.id == userId;
       allow update: if isExistingOwner(userId) || isAdmin();
       allow delete: if isExistingOwner(userId) || isAdmin();
