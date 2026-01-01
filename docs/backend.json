@@ -35,6 +35,13 @@
           "type": "string",
           "enum": ["student", "admin"],
           "description": "The role of the user."
+        },
+        "adminOf": {
+          "type": "array",
+          "description": "List of club IDs for which the user is an admin.",
+          "items": {
+            "type": "string"
+          }
         }
       },
       "required": [
@@ -42,14 +49,15 @@
         "email",
         "firstName",
         "lastName",
-        "role"
+        "role",
+        "adminOf"
       ]
     },
     "Club": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Club",
       "type": "object",
-      "description": "Represents a club within the IARE Clubs application.",
+      "description": "Represents a student club at the Institute of Aeronautical Engineering (IARE).",
       "properties": {
         "id": {
           "type": "string",
@@ -61,16 +69,20 @@
         },
         "description": {
           "type": "string",
-          "description": "Description of the club."
+          "description": "Description of the club's purpose and activities."
         },
         "adminId": {
           "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Club) Represents the admin of the club."
+          "description": "The UID of the user who administers the club."
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "URL for the club's logo or banner image."
         },
         "status": {
           "type": "string",
           "enum": ["pending", "approved", "rejected"],
-          "description": "The approval status of the club."
+          "description": "The approval status of the club, managed by a global admin."
         }
       },
       "required": [
@@ -78,14 +90,15 @@
         "name",
         "description",
         "adminId",
-        "status"
+        "status",
+        "logoUrl"
       ]
     },
     "Event": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Event",
       "type": "object",
-      "description": "Represents an event organized by a club.",
+      "description": "Represents an event organized by a club at IARE.",
       "properties": {
         "id": {
           "type": "string",
@@ -110,7 +123,15 @@
         },
         "location": {
           "type": "string",
-          "description": "Location of the event."
+          "description": "Location of the event on campus."
+        },
+        "bannerUrl": {
+          "type": "string",
+          "description": "URL for the event's banner image."
+        },
+        "report": {
+          "type": "string",
+          "description": "The generated AI report content."
         }
       },
       "required": [
@@ -119,14 +140,15 @@
         "name",
         "description",
         "dateTime",
-        "location"
+        "location",
+        "bannerUrl"
       ]
     },
     "Registration": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Registration",
       "type": "object",
-      "description": "Represents a user's registration for an event.",
+      "description": "Represents a student's registration for an event at IARE.",
       "properties": {
         "id": {
           "type": "string",
@@ -134,11 +156,11 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Registration) The user who registered."
+          "description": "Reference to UserProfile. The user who registered."
         },
         "eventId": {
           "type": "string",
-          "description": "Reference to Event. (Relationship: Event 1:N Registration) The event the user registered for."
+          "description": "Reference to Event. The event the user registered for."
         },
         "registrationDate": {
           "type": "string",
@@ -162,7 +184,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "EventReport",
       "type": "object",
-      "description": "Represents an AI-generated report for an event.",
+      "description": "Represents an AI-generated report for an event at IARE.",
       "properties": {
         "id": {
           "type": "string",
@@ -170,7 +192,7 @@
         },
         "eventId": {
           "type": "string",
-          "description": "Reference to Event. (Relationship: Event 1:N EventReport) The event the report is for."
+          "description": "Reference to Event. The event the report is for."
         },
         "reportDate": {
           "type": "string",
@@ -209,7 +231,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ClubMembership",
       "type": "object",
-      "description": "Represents the many-to-many relationship between users and clubs.",
+      "description": "Represents the many-to-many relationship between students and clubs at IARE.",
       "properties": {
         "id": {
           "type": "string",
@@ -217,11 +239,11 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile N:N Club) The user who is a member of the club."
+          "description": "Reference to UserProfile. The user who is a member of the club."
         },
         "clubId": {
           "type": "string",
-          "description": "Reference to Club. (Relationship: Club N:N UserProfile) The club the user is a member of."
+          "description": "Reference to Club. The club the user is a member of."
         },
         "joinDate": {
           "type": "string",
@@ -232,8 +254,7 @@
       "required": [
         "id",
         "userId",
-        "clubId",
-        "joinDate"
+        "clubId"
       ]
     }
   },
@@ -251,7 +272,7 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user profile information. This path ensures only the authenticated user can access their own profile.",
+          "description": "Stores student and faculty profile information. This path ensures only the authenticated user can access their own profile.",
           "params": [
             {
               "name": "userId",
@@ -283,7 +304,7 @@
           "schema": {
             "$ref": "#/backend/entities/Event"
           },
-          "description": "Stores event information for a specific club.  Authorization: Club admins (identified by the `adminId` in the `Club` document) can create, modify, and delete events within their club.",
+          "description": "Stores event information for a specific club. Authorization: Club admins (identified by the `adminId` in the `Club` document) can create, modify, and delete events within their club.",
           "params": [
             {
               "name": "clubId",
@@ -357,6 +378,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability for the IARE Clubs application. It leverages path-based ownership for user profiles and clubs, and a combination of path-based ownership and denormalization for events and registrations.  Specifically, the `clubs/{clubId}` collection stores club information and is secured by checking if the user's ID matches the `adminId` in the Club document. This means only the club admin can manage the club's data.  The `users/{userId}/registrations/{registrationId}` collection stores registration data. Since the User owns the Registration, we follow the path-based ownership strategy.  For events, the structure `/clubs/{clubId}/events/{eventId}` enforces that events are owned by a club. The structure `/clubs/{clubId}/events/{eventId}/reports/{reportId}` is used to store the AI-powered reports for events, where the event owns the report, therefore enforcing path-based ownership.  Authorization Independence (CRITICAL): Authorization independence is achieved by avoiding `get()` calls in security rules. For example, club admin verification is done by directly comparing `request.auth.uid` to the `adminId` field within the club document itself, rather than performing a `get()` on a parent document or relying on custom claims.  Clarity of Intent (Debuggability): The data structure clearly expresses the ownership and relationships between entities. For example, it is clear from the path `/clubs/{clubId}/events/{eventId}` that events belong to clubs.  QAPs (Rules are not Filters): The structure supports secure `list` operations by ensuring that collections contain documents with homogeneous security requirements. For instance, all documents in `/users/{userId}/registrations` can be listed with a rule ensuring that `request.auth.uid == userId`.  Overall, this structure avoids hierarchical authorization dependencies, simplifies security rules, and enables atomic operations."
+    "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability for the IARE Clubs application. It leverages path-based ownership for user profiles and clubs, and a combination of path-based ownership and denormalization for events and registrations. Specifically, the `clubs/{clubId}` collection stores club information and is secured by checking if the user's ID matches the `adminId` in the Club document. This means only the club admin can manage the club's data. The `users/{userId}/registrations/{registrationId}` collection stores registration data. Since the User owns the Registration, we follow the path-based ownership strategy. For events, the structure `/clubs/{clubId}/events/{eventId}` enforces that events are owned by a club. The structure `/clubs/{clubId}/events/{eventId}/reports/{reportId}` is used to store the AI-powered reports for events, where the event owns the report, therefore enforcing path-based ownership. Authorization Independence (CRITICAL): Authorization independence is achieved by avoiding `get()` calls in security rules. For example, club admin verification is done by directly comparing `request.auth.uid` to the `adminId` field within the club document itself, rather than performing a `get()` on a parent document or relying on custom claims. Clarity of Intent (Debuggability): The data structure clearly expresses the ownership and relationships between entities. For example, it is clear from the path `/clubs/{clubId}/events/{eventId}` that events belong to clubs. QAPs (Rules are not Filters): The structure supports secure `list` operations by ensuring that collections contain documents with homogeneous security requirements. For instance, all documents in `/users/{userId}/registrations` can be listed with a rule ensuring that `request.auth.uid == userId`. Overall, this structure avoids hierarchical authorization dependencies, simplifies security rules, and enables atomic operations."
   }
 }

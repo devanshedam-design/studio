@@ -40,7 +40,6 @@ export default function CreateClubPage() {
         try {
             const batch = writeBatch(firestore);
             
-            // 1. Create new Club with 'pending' status
             const newClubRef = doc(collection(firestore, 'clubs'));
             const clubId = newClubRef.id;
             const logoUrl = PlaceHolderImages.find(p => p.id === 'club-1')?.imageUrl || `https://picsum.photos/seed/${clubId}/600/400`;
@@ -52,14 +51,10 @@ export default function CreateClubPage() {
                 ...values,
             });
 
-            // 2. Update User's adminOf array - this gives them admin rights immediately
             const userRef = doc(firestore, 'users', user.id);
             const newAdminOf = [...user.adminOf, clubId];
             batch.update(userRef, { adminOf: newAdminOf });
             
-            // User does not auto-join as a member until approved.
-            // Admin can see the club in their admin list.
-
             await batch.commit();
 
             toast({
@@ -83,7 +78,7 @@ export default function CreateClubPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-3xl">Propose a New Club</CardTitle>
-                    <CardDescription>Fill out the form below to submit your club for admin approval.</CardDescription>
+                    <CardDescription>Bring your idea to life. Fill out the form below to submit your club for admin approval at IARE.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>

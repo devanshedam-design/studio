@@ -2,19 +2,21 @@
  * # Firestore Security Rules for IARE Clubs
  *
  * ## Core Philosophy
- * This ruleset enforces a security model based on user ownership and a distinct "Club Admin" role, supplemented by a global system administrator. The model is designed for security and scalability, ensuring users can only access their own private data while allowing for controlled management of shared resources like clubs and events.
+ * This ruleset is for the IARE Clubs application, a platform for student organizations at the Institute of Aeronautical Engineering, Hyderabad. 
+ * It enforces a security model based on user ownership and a distinct "Club Admin" role, supplemented by a global system administrator. 
+ * The model is designed for security and scalability, ensuring students can only access their own private data while allowing for 
+ * controlled management of shared resources like clubs and events.
  *
  * ## Data Structure
- * - `/users/{userId}`: Contains private user profile data and nested user-specific collections like registrations. Access is strictly limited to the document owner.
- * - `/clubs/{clubId}`: A top-level collection for clubs. Access to modify a club or its subcollections (events, reports) is governed by an `adminId` field on the club document, designating the Club Admin. Club and event information is publicly readable to allow for discovery.
- * - `/clubMemberships`: A top-level collection managing the many-to-many relationship between users and clubs.
+ * - `/users/{userId}`: Contains private student/faculty profile data. Access is strictly limited to the document owner.
+ * - `/clubs/{clubId}`: A top-level collection for clubs. Access to modify a club or its subcollections is governed by an `adminId` field.
+ * - `/clubMemberships`: Manages the many-to-many relationship between users and clubs.
  *
  * ## Key Security Decisions
- * - **User Data Privacy**: All data under `/users/{userId}` is strictly private. Users cannot see or list other users' profiles or registrations, except for the global admin.
- * - **Club Admin Authority**: A user whose UID is stored in a club's `adminId` field has full control over that club document and all nested documents (events, reports). This avoids the need for custom claims.
- * - **Global Admin**: A specific email address is granted global admin privileges, allowing bypass of standard ownership checks and management of club statuses.
- * - **Public Discoverability via Approval**: Only clubs with a `status` of 'approved' are publicly readable. This creates an admin approval workflow for new clubs.
- * - **Denormalization for Authorization**: Authorization decisions rely on data stored directly on the documents being secured (e.g., the `adminId` on a club document). This approach is fast, cost-effective, and avoids complex, non-performant `get` calls in most rules.
+ * - **User Data Privacy**: All data under `/users/{userId}` is strictly private.
+ * - **Club Admin Authority**: A user whose UID is in a club's `adminId` field has full control over that club and its nested documents.
+ * - **Global Admin**: A specific email address (`devanshedam@gmail.com`) is granted global admin privileges.
+ * - **Public Discoverability via Approval**: Only clubs with a `status` of 'approved' are publicly readable.
  *
  */
 rules_version = '2';
@@ -50,7 +52,7 @@ service cloud.firestore {
      * Checks if the authenticated user's UID matches the provided userId.
      */
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     /**
@@ -95,11 +97,8 @@ service cloud.firestore {
     // ---------------------------------------------------------------------
 
     /**
-     * @description A user can manage their own profile, but not see others. Admins can list all users.
+     * @description A user can manage their own profile. Admins can list all users.
      * @path /users/{userId}
-     * @allow (create) a user with UID 'user123' to create their own profile at `/users/user123`.
-     * @deny (get) a user with UID 'user456' from reading `/users/user123`.
-     * @principle Restricts access to a user's own data tree.
      */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
@@ -113,9 +112,6 @@ service cloud.firestore {
       /**
        * @description A user can manage their own event registrations.
        * @path /users/{userId}/registrations/{registrationId}
-       * @allow (create) user 'user123' to create a registration document under their own path.
-       * @deny (list) user 'user456' from listing registrations for 'user123'.
-       * @principle Enforces strict data ownership within a user's private data tree.
        */
       match /registrations/{registrationId} {
         allow get, list: if isOwner(userId) || isAdmin();
@@ -132,32 +128,23 @@ service cloud.firestore {
     /**
      * @description Clubs are publicly readable if 'approved', but only manageable by their designated admin or a global admin.
      * @path /clubs/{clubId}
-     * @allow (read) any user to read a club's details if its status is 'approved'.
-     * @allow (list) any user to list all 'approved' clubs.
-     * @deny (update) a user who is not the club admin or a global admin.
-     * @principle Implements an admin approval workflow for public visibility.
      */
     match /clubs/{clubId} {
       allow get: if resource.data.status == 'approved' || isOwner(resource.data.adminId) || isAdmin();
-      allow list: if isAdmin(); // Global admin can see all clubs for approval. Let client-side handle filtering.
+      allow list: if isAdmin(); // Global admin can see all clubs. Client-side filters 'pending'.
       
       allow create: if isSignedIn() 
                     && request.resource.data.adminId == request.auth.uid 
                     && request.resource.data.status == 'pending';
                     
-      allow update: if (isOwner(resource.data.adminId) || isAdmin()) 
-                    // Club admin can only update specific fields, not status
-                    && request.resource.data.keys().diff(resource.data.keys()).hasOnly(['name', 'description', 'logoUrl'])
+      allow update: if (isOwner(resource.data.adminId) && request.resource.data.keys().diff(resource.data.keys()).hasOnly(['name', 'description', 'logoUrl']))
                     || isAdmin(); // Admin can update anything.
                     
       allow delete: if (isOwner(resource.data.adminId) || isAdmin());
       
       /**
-       * @description Events are publicly readable, but managed by the parent club's admin.
+       * @description Events are publicly readable if the club is approved, but managed by the parent club's admin.
        * @path /clubs/{clubId}/events/{eventId}
-       * @allow (get) any user to read an event's details.
-       * @deny (create) a regular user from creating an event for a club they don't administer.
-       * @principle Inherits authorization from the parent document via a `get()` call.
        */
       match /events/{eventId} {
         allow get, list: if get(/databases/$(database)/documents/clubs/$(clubId)).data.status == 'approved' || isClubAdmin(clubId) || isAdmin();
@@ -168,9 +155,6 @@ service cloud.firestore {
         /**
          * @description Event reports are private and only accessible by the club admin.
          * @path /clubs/{clubId}/events/{eventId}/reports/{reportId}
-         * @allow (get) the club admin to read a report for their own event.
-         * @deny (get) a regular user from reading a sensitive event report.
-         * @principle Enforces strict confidentiality for derived data by inheriting parent permissions.
          */
         match /reports/{reportId} {
           allow get, list: if isClubAdmin(clubId) || isAdmin();
@@ -186,12 +170,8 @@ service cloud.firestore {
     // ---------------------------------------------------------------------
 
     /**
-     * @description Users can join/leave approved clubs. Club admins can remove members from their club.
+     * @description Users can join/leave approved clubs. Club admins can remove members.
      * @path /clubMemberships/{clubMembershipId}
-     * @allow (create) a signed-in user to create a membership for themselves in an 'approved' club.
-     * @deny (create) a user from creating a membership document for another user.
-     _ @deny (delete) a user from deleting another user's membership unless they are a club admin.
-     * @principle Implements a hybrid ownership model for managing many-to-many relationships.
      */
     match /clubMemberships/{clubMembershipId} {
       allow read: if true;

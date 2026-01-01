@@ -5,8 +5,8 @@ import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'IARE Clubs - College Club Event Management',
-  description: 'A smart college club event management platform for IARE.',
+  title: 'IARE Clubs - Club Management Platform',
+  description: 'The official platform for managing student clubs, events, and activities at the Institute of Aeronautical Engineering (IARE), Dundigal, Hyderabad. A NAAC \'A++\' Grade Autonomous Institution.',
 };
 
 export default function RootLayout({

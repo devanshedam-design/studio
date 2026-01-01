@@ -28,7 +28,7 @@ export default function AuthLayout({
                     IARE Clubs
                 </h1>
             </div>
-            <p className="text-muted-foreground">Your campus life, connected.</p>
+            <p className="text-muted-foreground">The student club platform for the Institute of Aeronautical Engineering, Hyderabad.</p>
         </div>
         {children}
       </div>
