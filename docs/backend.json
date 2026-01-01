@@ -1,0 +1,351 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile in the ClubHive application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the user."
+        },
+        "department": {
+          "type": "string",
+          "description": "Department the user belongs to (e.g., Computer Science, Engineering)."
+        },
+        "year": {
+          "type": "number",
+          "description": "Year of study (e.g., 1, 2, 3, 4)."
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName"
+      ]
+    },
+    "Club": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Club",
+      "type": "object",
+      "description": "Represents a club within the ClubHive application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Club entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the club."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the club."
+        },
+        "adminId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Club) Represents the admin of the club."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "adminId"
+      ]
+    },
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents an event organized by a club.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Event entity."
+        },
+        "clubId": {
+          "type": "string",
+          "description": "Reference to Club. (Relationship: Club 1:N Event) The club organizing the event."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the event."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the event."
+        },
+        "dateTime": {
+          "type": "string",
+          "description": "Date and time of the event.",
+          "format": "date-time"
+        },
+        "location": {
+          "type": "string",
+          "description": "Location of the event."
+        }
+      },
+      "required": [
+        "id",
+        "clubId",
+        "name",
+        "description",
+        "dateTime",
+        "location"
+      ]
+    },
+    "Registration": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Registration",
+      "type": "object",
+      "description": "Represents a user's registration for an event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Registration entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Registration) The user who registered."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Reference to Event. (Relationship: Event 1:N Registration) The event the user registered for."
+        },
+        "registrationDate": {
+          "type": "string",
+          "description": "Date and time of registration.",
+          "format": "date-time"
+        },
+        "qrCode": {
+          "type": "string",
+          "description": "QR code associated with the registration (for entry pass)."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "eventId",
+        "registrationDate",
+        "qrCode"
+      ]
+    },
+    "EventReport": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EventReport",
+      "type": "object",
+      "description": "Represents an AI-generated report for an event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the EventReport entity."
+        },
+        "eventId": {
+          "type": "string",
+          "description": "Reference to Event. (Relationship: Event 1:N EventReport) The event the report is for."
+        },
+        "reportDate": {
+          "type": "string",
+          "description": "Date the report was generated.",
+          "format": "date-time"
+        },
+        "attendanceSummary": {
+          "type": "string",
+          "description": "Summary of attendance at the event."
+        },
+        "engagementInsights": {
+          "type": "string",
+          "description": "Insights into user engagement during the event."
+        },
+        "departmentWiseParticipation": {
+          "type": "string",
+          "description": "Data on department-wise participation in the event."
+        },
+        "downloadUrl": {
+          "type": "string",
+          "description": "URL to download the report file.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "eventId",
+        "reportDate",
+        "attendanceSummary",
+        "engagementInsights",
+        "departmentWiseParticipation",
+        "downloadUrl"
+      ]
+    },
+    "ClubMembership": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ClubMembership",
+      "type": "object",
+      "description": "Represents the many-to-many relationship between users and clubs.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ClubMembership entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile N:N Club) The user who is a member of the club."
+        },
+        "clubId": {
+          "type": "string",
+          "description": "Reference to Club. (Relationship: Club N:N UserProfile) The club the user is a member of."
+        },
+        "joinDate": {
+          "type": "string",
+          "description": "Date user joined club",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "clubId",
+        "joinDate"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information. This path ensures only the authenticated user can access their own profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "clubs/{clubId}",
+        "definition": {
+          "entityName": "Club",
+          "schema": {
+            "$ref": "#/backend/entities/Club"
+          },
+          "description": "Stores club information. Access is controlled by the 'adminId' field, ensuring only the club admin can modify the club's data.",
+          "params": [
+            {
+              "name": "clubId",
+              "description": "The unique identifier of the club."
+            }
+          ]
+        }
+      },
+      {
+        "path": "clubs/{clubId}/events/{eventId}",
+        "definition": {
+          "entityName": "Event",
+          "schema": {
+            "$ref": "#/backend/entities/Event"
+          },
+          "description": "Stores event information for a specific club.  Authorization: Club admins (identified by the `adminId` in the `Club` document) can create, modify, and delete events within their club.",
+          "params": [
+            {
+              "name": "clubId",
+              "description": "The unique identifier of the club."
+            },
+            {
+              "name": "eventId",
+              "description": "The unique identifier of the event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "users/{userId}/registrations/{registrationId}",
+        "definition": {
+          "entityName": "Registration",
+          "schema": {
+            "$ref": "#/backend/entities/Registration"
+          },
+          "description": "Stores registration information for a specific user. Only the user can access their registration data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "registrationId",
+              "description": "The unique identifier of the registration."
+            }
+          ]
+        }
+      },
+      {
+        "path": "clubs/{clubId}/events/{eventId}/reports/{reportId}",
+        "definition": {
+          "entityName": "EventReport",
+          "schema": {
+            "$ref": "#/backend/entities/EventReport"
+          },
+          "description": "Stores AI-generated event reports for a specific event. Only the club admin (identified by adminId in the club document) can access the reports.",
+          "params": [
+            {
+              "name": "clubId",
+              "description": "The unique identifier of the club."
+            },
+            {
+              "name": "eventId",
+              "description": "The unique identifier of the event."
+            },
+            {
+              "name": "reportId",
+              "description": "The unique identifier of the report."
+            }
+          ]
+        }
+      },
+      {
+        "path": "clubMemberships/{clubMembershipId}",
+        "definition": {
+          "entityName": "ClubMembership",
+          "schema": {
+            "$ref": "#/backend/entities/ClubMembership"
+          },
+          "description": "Stores the many-to-many relationship between users and clubs. Security rules should ensure that only the user or an admin can create/delete memberships involving that user.",
+          "params": [
+            {
+              "name": "clubMembershipId",
+              "description": "The unique identifier for the ClubMembership entity."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability for the ClubHive application. It leverages path-based ownership for user profiles and clubs, and a combination of path-based ownership and denormalization for events and registrations.  Specifically, the `clubs/{clubId}` collection stores club information and is secured by checking if the user's ID matches the `adminId` in the Club document. This means only the club admin can manage the club's data.  The `users/{userId}/registrations/{registrationId}` collection stores registration data. Since the User owns the Registration, we follow the path-based ownership strategy.  For events, the structure `/clubs/{clubId}/events/{eventId}` enforces that events are owned by a club. The structure `/clubs/{clubId}/events/{eventId}/reports/{reportId}` is used to store the AI-powered reports for events, where the event owns the report, therefore enforcing path-based ownership.  Authorization Independence (CRITICAL): Authorization independence is achieved by avoiding `get()` calls in security rules. For example, club admin verification is done by directly comparing `request.auth.uid` to the `adminId` field within the club document itself, rather than performing a `get()` on a parent document or relying on custom claims.  Clarity of Intent (Debuggability): The data structure clearly expresses the ownership and relationships between entities. For example, it is clear from the path `/clubs/{clubId}/events/{eventId}` that events belong to clubs.  QAPs (Rules are not Filters): The structure supports secure `list` operations by ensuring that collections contain documents with homogeneous security requirements. For instance, all documents in `/users/{userId}/registrations` can be listed with a rule ensuring that `request.auth.uid == userId`.  Overall, this structure avoids hierarchical authorization dependencies, simplifies security rules, and enables atomic operations."
+  }
+}

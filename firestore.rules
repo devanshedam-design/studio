@@ -1,0 +1,193 @@
+/**
+ * # Firestore Security Rules for ClubHive
+ *
+ * ## Core Philosophy
+ * This ruleset enforces a security model based on user ownership and a distinct "Club Admin" role, supplemented by a global system administrator. The model is designed for security and scalability, ensuring users can only access their own private data while allowing for controlled management of shared resources like clubs and events.
+ *
+ * ## Data Structure
+ * - `/users/{userId}`: Contains private user profile data and nested user-specific collections like registrations. Access is strictly limited to the document owner.
+ * - `/clubs/{clubId}`: A top-level collection for clubs. Access to modify a club or its subcollections (events, reports) is governed by an `adminId` field on the club document, designating the Club Admin. Club and event information is publicly readable to allow for discovery.
+ * - `/clubMemberships`: A top-level collection managing the many-to-many relationship between users and clubs.
+ *
+ * ## Key Security Decisions
+ * - **User Data Privacy**: All data under `/users/{userId}` is strictly private. Users cannot see or list other users' profiles or registrations.
+ * - **Club Admin Authority**: A user whose UID is stored in a club's `adminId` field has full control over that club document and all nested documents (events, reports). This avoids the need for custom claims.
+ * - **Global Admin**: A specific email address is granted global admin privileges, allowing bypass of standard ownership checks for administrative purposes.
+ * - **Public Discoverability**: Core information in `/clubs` and `/clubs/{clubId}/events` is publicly readable to allow users to browse and discover clubs and events before joining or registering.
+ * - **Denormalization for Authorization**: Authorization decisions rely on data stored directly on the documents being secured (e.g., the `adminId` on a club document). This approach is fast, cost-effective, and avoids complex, non-performant `get` calls in most rules. Necessary `get` calls are used judiciously to check for club admin status when securing subcollections.
+ *
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------------
+    // Helper Functions
+    // ---------------------------------------------------------------------
+
+    /**
+     * The email of the designated global system administrator.
+     */
+    function ADMIN_EMAIL() {
+      return 'devanshedam@gmail.com';
+    }
+
+    /**
+     * Checks if the currently authenticated user is the global system admin.
+     */
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == ADMIN_EMAIL();
+    }
+    
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the provided userId.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document. Used for update/delete.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Checks if the authenticated user is the admin of a specific club.
+     * This requires one 'get' call to the parent club document.
+     */
+    function isClubAdmin(clubId) {
+      return isSignedIn() && get(/databases/$(database)/documents/clubs/$(clubId)).data.adminId == request.auth.uid;
+    }
+
+    /**
+     * Checks for club admin role on an existing document. Used for update/delete.
+     */
+    function isExistingClubAdmin(clubId) {
+      return resource != null && isClubAdmin(clubId);
+    }
+
+    /**
+     * Validates that the user ID in a newly created document matches the user's
+     * auth UID, enforcing a link between the document and its owner.
+     */
+    function userIsSelf(data) {
+      return data.userId == request.auth.uid;
+    }
+    
+    /**
+     * Validates that the user ID field remains unchanged during an update.
+     */
+    function userIdIsImmutable() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+    
+    // ---------------------------------------------------------------------
+    // User Profile Rules
+    // ---------------------------------------------------------------------
+
+    /**
+     * @description A user can manage their own profile, but not see others.
+     * @path /users/{userId}
+     * @allow (create) a user with UID 'user123' to create their own profile at `/users/user123`.
+     * @deny (get) a user with UID 'user456' from reading `/users/user123`.
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if false; // Disallow listing of all user profiles for privacy.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) || isAdmin();
+      allow delete: if isExistingOwner(userId) || isAdmin();
+
+      // --- Nested User Collections ---
+
+      /**
+       * @description A user can manage their own event registrations.
+       * @path /users/{userId}/registrations/{registrationId}
+       * @allow (create) user 'user123' to create a registration document under their own path.
+       * @deny (list) user 'user456' from listing registrations for 'user123'.
+       * @principle Enforces strict data ownership within a user's private data tree.
+       */
+      match /registrations/{registrationId} {
+        allow get, list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if (isExistingOwner(userId) && userIdIsImmutable()) || isAdmin();
+        allow delete: if isExistingOwner(userId) || isAdmin();
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // Club & Event Rules
+    // ---------------------------------------------------------------------
+
+    /**
+     * @description Clubs are publicly readable, but only manageable by their designated admin.
+     * @path /clubs/{clubId}
+     * @allow (get) any user (signed in or not) to read a club's details.
+     * @deny (update) a user who is not the admin listed in the `adminId` field.
+     * @principle Implements public-read with owner-only writes.
+     */
+    match /clubs/{clubId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && (request.resource.data.adminId == request.auth.uid || isAdmin());
+      allow update: if (isOwner(resource.data.adminId) || isAdmin()) && resource != null;
+      allow delete: if (isOwner(resource.data.adminId) || isAdmin()) && resource != null;
+      
+      /**
+       * @description Events are publicly readable, but managed by the parent club's admin.
+       * @path /clubs/{clubId}/events/{eventId}
+       * @allow (get) any user to read an event's details.
+       * @deny (create) a regular user from creating an event for a club they don't administer.
+       * @principle Inherits authorization from the parent document via a `get()` call.
+       */
+      match /events/{eventId} {
+        allow get, list: if true;
+        allow create: if isClubAdmin(clubId) || isAdmin();
+        allow update: if isExistingClubAdmin(clubId) || isAdmin();
+        allow delete: if isExistingClubAdmin(clubId) || isAdmin();
+
+        /**
+         * @description Event reports are private and only accessible by the club admin.
+         * @path /clubs/{clubId}/events/{eventId}/reports/{reportId}
+         * @allow (get) the club admin to read a report for their own event.
+         * @deny (get) a regular user from reading a sensitive event report.
+         * @principle Enforces strict confidentiality for derived data by inheriting parent permissions.
+         */
+        match /reports/{reportId} {
+          allow get, list: if isClubAdmin(clubId) || isAdmin();
+          allow create: if isClubAdmin(clubId) || isAdmin();
+          allow update: if isExistingClubAdmin(clubId) || isAdmin();
+          allow delete: if isExistingClubAdmin(clubId) || isAdmin();
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // Club Membership Rules
+    // ---------------------------------------------------------------------
+
+    /**
+     * @description Users can join/leave clubs. Club admins can remove members from their club.
+     * @path /clubMemberships/{clubMembershipId}
+     * @allow (create) a signed-in user to create a membership for themselves.
+     * @deny (create) a user from creating a membership document for another user.
+     * @deny (delete) a user from deleting another user's membership unless they are a club admin.
+     * @principle Implements a hybrid ownership model for managing many-to-many relationships.
+     */
+    match /clubMemberships/{clubMembershipId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && userIsSelf(request.resource.data);
+      allow update: if false; // Memberships should be created/deleted, not updated.
+      allow delete: if resource != null && (isOwner(resource.data.userId) || isClubAdmin(resource.data.clubId) || isAdmin());
+    }
+  }
+}
