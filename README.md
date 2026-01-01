@@ -53,13 +53,21 @@ npm install
 
 The project uses Firebase for its backend. The necessary Firebase configuration is already included in `src/firebase/config.ts`. However, for the Genkit AI features to work, you need to provide a Google AI API key.
 
-1.  Create a new file named `.env` in the root of your project.
-2.  Obtain an API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-3.  Add the key to your `.env` file like this:
+You can create the `.env` file by running the provided shell script. This will create a `.env` file with a placeholder for your API key.
 
-    ```
-    GEMINI_API_KEY=YOUR_API_KEY_HERE
-    ```
+```bash
+# Make the script executable (only needs to be done once)
+chmod +x setup-env.sh
+
+# Run the script
+./setup-env.sh
+```
+
+After running the script, open the newly created `.env` file and replace `YOUR_API_KEY_HERE` with your key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+
+```
+GEMINI_API_KEY=YOUR_API_KEY_HERE
+```
 
 ### 4. Running the Development Servers
 
