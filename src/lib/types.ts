@@ -1,3 +1,5 @@
+'use client';
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserProfile = {
@@ -16,7 +18,7 @@ export type Club = {
   name:string;
   description: string;
   adminId: string;
-  // logoUrl: string;
+  logoUrl: string;
 };
 
 export type ClubWithMembership = Club & { isMember: boolean; isAdmin: boolean; };
@@ -28,7 +30,7 @@ export type ClubEvent = {
   description: string;
   dateTime: Timestamp;
   location: string;
-  // bannerUrl: string;
+  bannerUrl: string;
   report?: string;
 };
 

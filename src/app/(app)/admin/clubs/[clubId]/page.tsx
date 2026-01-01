@@ -15,10 +15,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, FileText, Edit, Trash2, UserPlus, X } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, FileText, Edit, Trash2, UserPlus, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import type { Club, ClubEvent, ClubMembership, UserProfile } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -28,8 +28,9 @@ import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/no
 function MembersTab({ clubId }: { clubId: string }) {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [members, setMembers] = useState<UserProfile[]>([]);
+    const [members, setMembers] = useState<(UserProfile & { membershipId: string })[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isAdding, setIsAdding] = useState(false);
     const [email, setEmail] = useState('');
 
     const membershipsQuery = useMemoFirebase(() => query(collection(firestore, 'clubMemberships'), where('clubId', '==', clubId)), [firestore, clubId]);
@@ -42,23 +43,27 @@ function MembersTab({ clubId }: { clubId: string }) {
             const usersQuery = query(collection(firestore, 'users'), where('id', 'in', memberIds));
             getDocs(usersQuery).then(userSnaps => {
                 const userProfiles = userSnaps.docs.map(d => d.data() as UserProfile);
-                setMembers(userProfiles);
+                const membersWithId = userProfiles.map(u => {
+                    const membership = memberships?.find(m => m.userId === u.id);
+                    return { ...u, membershipId: membership?.id || '' };
+                });
+                setMembers(membersWithId);
                 setIsLoading(false);
             });
         } else if (!loadingMemberships) {
             setMembers([]);
             setIsLoading(false);
         }
-    }, [memberIds, loadingMemberships, firestore]);
+    }, [memberIds, memberships, loadingMemberships, firestore]);
 
     const handleAddMember = async () => {
         if (!email) return;
-        setIsLoading(true);
+        setIsAdding(true);
         try {
             const userQuery = query(collection(firestore, 'users'), where('email', '==', email));
             const userSnapshot = await getDocs(userQuery);
             if (userSnapshot.empty) {
-                toast({ variant: 'destructive', title: 'User not found.' });
+                toast({ variant: 'destructive', title: 'User not found.', description: `No user with email ${email} exists.` });
                 return;
             }
             const userToAdd = userSnapshot.docs[0].data() as UserProfile;
@@ -68,35 +73,27 @@ function MembersTab({ clubId }: { clubId: string }) {
                 return;
             }
 
-            const newMembership: Omit<ClubMembership, 'id'> = {
+            const newMembership = {
                 userId: userToAdd.id,
                 clubId: clubId,
-                joinDate: new Date() as any, // Timestamps are handled by Firestore
+                joinDate: serverTimestamp(),
             };
             await addDoc(collection(firestore, 'clubMemberships'), newMembership);
-            toast({ title: 'Member added!' });
+            toast({ title: 'Member added!', description: `${userToAdd.firstName} has been added to the club.` });
             setEmail('');
-        } catch (e) {
-            toast({ variant: 'destructive', title: 'Error adding member' });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Error adding member', description: e.message });
         } finally {
-            setIsLoading(false);
+            setIsAdding(false);
         }
     };
     
-    const handleRemoveMember = async (userId: string) => {
-        setIsLoading(true);
+    const handleRemoveMember = async (membershipId: string, memberName: string) => {
         try {
-            const membershipQuery = query(collection(firestore, 'clubMemberships'), where('userId', '==', userId), where('clubId', '==', clubId));
-            const membershipSnapshot = await getDocs(membershipQuery);
-            if (!membershipSnapshot.empty) {
-                const docToDelete = membershipSnapshot.docs[0];
-                await deleteDoc(docToDelete.ref);
-                toast({ title: 'Member removed.' });
-            }
-        } catch (e) {
-             toast({ variant: 'destructive', title: 'Error removing member' });
-        } finally {
-            setIsLoading(false);
+            await deleteDoc(doc(firestore, 'clubMemberships', membershipId));
+            toast({ title: 'Member removed.', description: `${memberName} has been removed from the club.` });
+        } catch (e: any) {
+             toast({ variant: 'destructive', title: 'Error removing member', description: e.message });
         }
     };
 
@@ -104,38 +101,44 @@ function MembersTab({ clubId }: { clubId: string }) {
         <Card>
             <CardHeader>
                 <CardTitle>Club Members</CardTitle>
-                <CardDescription>Add or remove members from your club.</CardDescription>
+                <CardDescription>Add or remove members from your club. There are currently {members.length} members.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="flex gap-2 mb-4">
-                    <Input placeholder="Enter user's email to add" value={email} onChange={e => setEmail(e.target.value)} />
-                    <Button onClick={handleAddMember} disabled={isLoading}><UserPlus className="mr-2"/> Add Member</Button>
+                <div className="flex gap-2 mb-6 pb-6 border-b">
+                    <Input placeholder="Enter user's email to add..." value={email} onChange={e => setEmail(e.target.value)} />
+                    <Button onClick={handleAddMember} disabled={isAdding}>
+                        {isAdding ? <Loader2 className="mr-2 animate-spin"/> : <UserPlus className="mr-2"/>}
+                         Add Member
+                    </Button>
                 </div>
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Name</TableHead>
                             <TableHead>Email</TableHead>
+                            <TableHead>Department</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableRow><TableCell colSpan={3} className="text-center">Loading members...</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={4} className="text-center h-24">Loading members...</TableCell></TableRow>
                         ) : members.length > 0 ? (
                             members.map(member => (
                                 <TableRow key={member.id}>
-                                    <TableCell>{member.firstName} {member.lastName}</TableCell>
+                                    <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
                                     <TableCell>{member.email}</TableCell>
+                                    <TableCell>{member.department || 'N/A'}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(member.id)} disabled={isLoading}>
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveMember(member.membershipId, `${member.firstName} ${member.lastName}`)}>
                                             <X className="h-4 w-4 text-destructive" />
+                                            <span className="sr-only">Remove member</span>
                                         </Button>
                                     </TableCell>
                                 </TableRow>
                             ))
                         ) : (
-                             <TableRow><TableCell colSpan={3} className="text-center">No members yet.</TableCell></TableRow>
+                             <TableRow><TableCell colSpan={4} className="text-center h-24">No members yet. Add one above!</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -156,7 +159,7 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
     const { data: events, isLoading: eventsLoading } = useCollection<ClubEvent>(eventsQuery);
 
     useEffect(() => {
-        if (!authLoading && user && club && user.id !== club.adminId) {
+        if (!authLoading && user && club && !user.adminOf.includes(club.id)) {
             router.push('/dashboard');
         }
     }, [user, authLoading, router, club]);
@@ -181,7 +184,7 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                 </Link>
             </div>
             
-            <Tabs defaultValue="events">
+            <Tabs defaultValue="events" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="events">Events</TabsTrigger>
                     <TabsTrigger value="members">Members</TabsTrigger>
@@ -198,13 +201,14 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                                     <TableRow>
                                         <TableHead>Event Name</TableHead>
                                         <TableHead>Date</TableHead>
+                                        <TableHead>Location</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {eventsLoading ? (
-                                         <TableRow><TableCell colSpan={4} className="text-center">Loading events...</TableCell></TableRow>
+                                         <TableRow><TableCell colSpan={5} className="text-center h-24">Loading events...</TableCell></TableRow>
                                     ) : events && events.length > 0 ? (
                                         events.map(event => {
                                             const isPast = event.dateTime.toDate() < new Date();
@@ -212,6 +216,7 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                                             <TableRow key={event.id}>
                                                 <TableCell className="font-medium">{event.name}</TableCell>
                                                 <TableCell>{event.dateTime.toDate().toLocaleDateString()}</TableCell>
+                                                <TableCell>{event.location}</TableCell>
                                                 <TableCell>
                                                     <Badge variant={isPast ? 'outline' : 'default'}>{isPast ? 'Past' : 'Upcoming'}</Badge>
                                                 </TableCell>
@@ -232,10 +237,12 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                                                                 </DropdownMenuItem>
                                                             </Link>
                                                             )}
-                                                            <DropdownMenuItem disabled>
-                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                <span>Edit Event</span>
-                                                            </DropdownMenuItem>
+                                                            <Link href={`/events/${event.id}`}>
+                                                                <DropdownMenuItem>
+                                                                    <Edit className="mr-2 h-4 w-4" />
+                                                                    <span>View/Edit Event</span>
+                                                                </DropdownMenuItem>
+                                                            </Link>
                                                             <DropdownMenuItem className="text-destructive" disabled>
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 <span>Delete Event</span>
@@ -247,7 +254,7 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                                             );
                                         })
                                     ) : (
-                                        <TableRow><TableCell colSpan={4} className="text-center">No events created yet.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={5} className="text-center h-24">No events created yet.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>

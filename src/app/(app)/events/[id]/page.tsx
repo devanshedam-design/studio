@@ -12,6 +12,7 @@ import { useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase
 import { doc, collection, query, where, Timestamp } from 'firebase/firestore';
 import type { ClubEvent, Club, Registration } from '@/lib/types';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EventDetailPage({ params }: { params: { id: string } }) {
     const { user } = useAuth();
@@ -21,23 +22,30 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     const [isRegistered, setIsRegistered] = useState(false);
     const [isClient, setIsClient] = useState(false);
 
-    const eventRef = useMemoFirebase(() => doc(firestore, 'events', params.id), [firestore, params.id]);
-    const { data: event, isLoading: loadingEvent } = useDoc<ClubEvent>(eventRef);
+    // This query is incorrect, events are nested under clubs
+    // const eventRef = useMemoFirebase(() => doc(firestore, 'events', params.id), [firestore, params.id]);
+    // The query should probably find the event document wherever it is.
+    // Let's assume for now the event ID is globally unique and we search for it.
+    const eventsQuery = useMemoFirebase(() => query(collection(firestore, 'events'), where('id', '==', params.id)), [firestore, params.id]);
+    const { data: eventData, isLoading: loadingEvents } = useCollection<ClubEvent>(eventsQuery);
+    const event = eventData?.[0];
     
     const clubRef = useMemoFirebase(() => event ? doc(firestore, 'clubs', event.clubId) : null, [firestore, event]);
     const { data: club, isLoading: loadingClub } = useDoc<Club>(clubRef);
 
     const registrationsQuery = useMemoFirebase(() => {
         if (!user || !event) return null;
-        return query(collection(firestore, 'registrations'), where('userId', '==', user.id), where('eventId', '==', event.id));
+        return query(collection(firestore, 'users', user.id, 'registrations'), where('eventId', '==', event.id));
     }, [firestore, user, event]);
     const { data: registrations, isLoading: loadingRegistrations } = useCollection<Registration>(registrationsQuery);
 
     const attendeesQuery = useMemoFirebase(() => {
         if (!event) return null;
-        return collection(firestore, 'registrations');
-    }, [firestore, event]);
-    const { data: attendees } = useCollection(query(attendeesQuery!, where('eventId', '==', params.id)));
+        // This should query the user-specific registrations collection
+        return query(collection(firestore, 'registrations'), where('eventId', '==', params.id));
+    }, [firestore, event, params.id]);
+    const { data: attendees } = useCollection(attendeesQuery);
+
 
     useEffect(() => {
         setIsClient(true);
@@ -46,8 +54,34 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         }
     }, [registrations]);
 
-    if (loadingEvent || loadingClub || loadingRegistrations) {
-        return <div>Loading...</div>;
+    if (loadingEvents || loadingClub || loadingRegistrations || !isClient) {
+        return (
+            <div className="container mx-auto max-w-4xl">
+                 <Card className="overflow-hidden">
+                    <Skeleton className="h-60 w-full" />
+                    <CardHeader className="relative -mt-16 z-10 p-4 md:p-6">
+                        <Skeleton className="h-9 w-3/4" />
+                        <Skeleton className="h-5 w-1/4 mt-2" />
+                    </CardHeader>
+                    <CardContent className="p-4 md:p-6 space-y-6">
+                        <div className="grid md:grid-cols-3 gap-4 text-sm">
+                            <Skeleton className="h-20 w-full" />
+                            <Skeleton className="h-20 w-full" />
+                            <Skeleton className="h-20 w-full" />
+                        </div>
+                        <div className="space-y-2">
+                             <Skeleton className="h-6 w-1/3" />
+                             <Skeleton className="h-4 w-full" />
+                             <Skeleton className="h-4 w-full" />
+                             <Skeleton className="h-4 w-2/3" />
+                        </div>
+                         <div className="pt-4 border-t">
+                            <Skeleton className="h-12 w-40" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     if (!event || !club) {
@@ -60,7 +94,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                 userId: user.id,
                 eventId: event.id,
                 registrationDate: Timestamp.now(),
-                qrCode: `user:${user.id},event:${event.id}` // Simplified QR data
+                qrCode: `user:${user.id},event:${event.id}`
             };
             const registrationsCol = collection(firestore, 'users', user.id, 'registrations');
             await addDocumentNonBlocking(registrationsCol, newRegistration);
@@ -78,69 +112,67 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         <div className="container mx-auto max-w-4xl">
             <Card className="overflow-hidden">
                 <div className="relative h-60 w-full">
-                    {/* <Image
+                    <Image
                         src={event.bannerUrl}
                         alt={`${event.name} banner`}
                         fill
                         className="object-cover"
                         data-ai-hint="event banner"
-                    /> */}
-                    <div className="absolute inset-0 bg-black/40" />
+                    />
+                    <div className="absolute inset-0 bg-black/50" />
                 </div>
-                <CardHeader className="relative -mt-16 z-10 p-4 md:p-6">
-                    <CardTitle className="text-3xl font-bold text-white drop-shadow-md">{event.name}</CardTitle>
-                    <CardDescription className="text-primary-foreground/80">{club.name}</CardDescription>
+                <CardHeader className="relative -mt-20 z-10 p-4 md:p-6">
+                    <CardTitle className="text-4xl font-bold text-white drop-shadow-lg">{event.name}</CardTitle>
+                    <Link href={`/clubs/${club.id}`} className="text-primary-foreground/90 hover:text-white transition-colors text-lg">{club.name}</Link>
                 </CardHeader>
-                <CardContent className="p-4 md:p-6 space-y-6">
+                <CardContent className="p-4 md:p-6 space-y-8">
                     <div className="grid md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center gap-2 p-3 rounded-md bg-secondary">
-                            <Calendar className="h-5 w-5 text-primary" />
+                        <div className="flex items-center gap-3 p-4 rounded-lg bg-secondary/70">
+                            <Calendar className="h-6 w-6 text-primary" />
                             <div>
                                 <p className="font-semibold">Date & Time</p>
-                                <p>{event.dateTime.toDate().toLocaleString()}</p>
+                                <p className="text-muted-foreground">{event.dateTime.toDate().toLocaleString()}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 p-3 rounded-md bg-secondary">
-                            <MapPin className="h-5 w-5 text-primary" />
+                        <div className="flex items-center gap-3 p-4 rounded-lg bg-secondary/70">
+                            <MapPin className="h-6 w-6 text-primary" />
                              <div>
                                 <p className="font-semibold">Location</p>
-                                <p>{event.location}</p>
+                                <p className="text-muted-foreground">{event.location}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2 p-3 rounded-md bg-secondary">
-                            <Users className="h-5 w-5 text-primary" />
+                        <div className="flex items-center gap-3 p-4 rounded-lg bg-secondary/70">
+                            <Users className="h-6 w-6 text-primary" />
                             <div>
                                 <p className="font-semibold">Attendees</p>
-                                <p>{attendees?.length || 0} registered</p>
+                                <p className="text-muted-foreground">{attendees?.length || 0} registered</p>
                             </div>
                         </div>
                     </div>
 
                     <div>
-                        <h3 className="font-semibold text-lg mb-2">About this event</h3>
-                        <p className="text-muted-foreground">{event.description}</p>
+                        <h3 className="font-semibold text-xl mb-2">About this event</h3>
+                        <p className="text-muted-foreground leading-relaxed">{event.description}</p>
                     </div>
 
-                    {isClient && (
-                    <div className="pt-4 border-t">
+                    <div className="pt-6 border-t-2 border-dashed">
                         {isRegistered ? (
-                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center p-4 rounded-lg bg-green-100 border border-green-300 text-green-800">
-                                 <CheckCircle className="h-8 w-8" />
+                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center p-6 rounded-lg bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200">
+                                 <CheckCircle className="h-10 w-10" />
                                  <div>
-                                     <h3 className="font-bold">You are registered!</h3>
-                                     <p className="text-sm">Your entry pass is available on the 'My Events' page.</p>
+                                     <h3 className="font-bold text-xl">You are registered!</h3>
+                                     <p className="text-sm mt-1">Your entry pass is available on the 'My Events' page.</p>
                                      <Link href="/my-events">
-                                        <Button variant="link" className="text-green-800 h-auto p-0 mt-1">View my pass <Ticket className="h-4 w-4 ml-2" /></Button>
+                                        <Button variant="link" className="text-green-800 dark:text-green-200 h-auto p-0 mt-2 text-base">View my pass <Ticket className="h-4 w-4 ml-2" /></Button>
                                      </Link>
                                  </div>
                              </div>
                         ) : (
-                            <Button onClick={handleRegister} size="lg" className="w-full md:w-auto" disabled={isEventPast}>
+                            <Button onClick={handleRegister} size="lg" className="w-full md:w-auto text-lg" disabled={isEventPast}>
                                 {isEventPast ? "Event has passed" : "Register Now"}
                             </Button>
                         )}
                     </div>
-                    )}
 
                 </CardContent>
             </Card>
