@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Home, 
+  User,
   Calendar, 
   Shield,
   LifeBuoy,
@@ -43,7 +43,7 @@ const AppSidebar = () => {
   const isGlobalAdmin = user.role === 'admin' && user.email === 'devanshedam@gmail.com';
 
   const menuItems = [
-    { href: '/dashboard', label: 'My Clubs', icon: Home },
+    { href: '/dashboard', label: 'My Profile', icon: User },
     { href: '/clubs', label: 'Explore Clubs', icon: Compass },
     { href: '/my-events', label: 'My Events', icon: Calendar },
   ];
