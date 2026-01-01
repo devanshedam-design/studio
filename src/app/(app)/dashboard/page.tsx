@@ -161,7 +161,7 @@ export default function ProfilePage() {
                                         <FormControl>
                                             <SelectTrigger>
                                             <SelectValue placeholder="Select your year" />
-                                            </Trigger>
+                                            </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
