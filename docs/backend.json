@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user profile in the ClubHive application.",
+      "description": "Represents a user profile in the IARE Clubs application.",
       "properties": {
         "id": {
           "type": "string",
@@ -49,7 +49,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Club",
       "type": "object",
-      "description": "Represents a club within the ClubHive application.",
+      "description": "Represents a club within the IARE Clubs application.",
       "properties": {
         "id": {
           "type": "string",
@@ -357,6 +357,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability for the ClubHive application. It leverages path-based ownership for user profiles and clubs, and a combination of path-based ownership and denormalization for events and registrations.  Specifically, the `clubs/{clubId}` collection stores club information and is secured by checking if the user's ID matches the `adminId` in the Club document. This means only the club admin can manage the club's data.  The `users/{userId}/registrations/{registrationId}` collection stores registration data. Since the User owns the Registration, we follow the path-based ownership strategy.  For events, the structure `/clubs/{clubId}/events/{eventId}` enforces that events are owned by a club. The structure `/clubs/{clubId}/events/{eventId}/reports/{reportId}` is used to store the AI-powered reports for events, where the event owns the report, therefore enforcing path-based ownership.  Authorization Independence (CRITICAL): Authorization independence is achieved by avoiding `get()` calls in security rules. For example, club admin verification is done by directly comparing `request.auth.uid` to the `adminId` field within the club document itself, rather than performing a `get()` on a parent document or relying on custom claims.  Clarity of Intent (Debuggability): The data structure clearly expresses the ownership and relationships between entities. For example, it is clear from the path `/clubs/{clubId}/events/{eventId}` that events belong to clubs.  QAPs (Rules are not Filters): The structure supports secure `list` operations by ensuring that collections contain documents with homogeneous security requirements. For instance, all documents in `/users/{userId}/registrations` can be listed with a rule ensuring that `request.auth.uid == userId`.  Overall, this structure avoids hierarchical authorization dependencies, simplifies security rules, and enables atomic operations."
+    "reasoning": "The Firestore data structure is designed to ensure authorization independence, clarity, and scalability for the IARE Clubs application. It leverages path-based ownership for user profiles and clubs, and a combination of path-based ownership and denormalization for events and registrations.  Specifically, the `clubs/{clubId}` collection stores club information and is secured by checking if the user's ID matches the `adminId` in the Club document. This means only the club admin can manage the club's data.  The `users/{userId}/registrations/{registrationId}` collection stores registration data. Since the User owns the Registration, we follow the path-based ownership strategy.  For events, the structure `/clubs/{clubId}/events/{eventId}` enforces that events are owned by a club. The structure `/clubs/{clubId}/events/{eventId}/reports/{reportId}` is used to store the AI-powered reports for events, where the event owns the report, therefore enforcing path-based ownership.  Authorization Independence (CRITICAL): Authorization independence is achieved by avoiding `get()` calls in security rules. For example, club admin verification is done by directly comparing `request.auth.uid` to the `adminId` field within the club document itself, rather than performing a `get()` on a parent document or relying on custom claims.  Clarity of Intent (Debuggability): The data structure clearly expresses the ownership and relationships between entities. For example, it is clear from the path `/clubs/{clubId}/events/{eventId}` that events belong to clubs.  QAPs (Rules are not Filters): The structure supports secure `list` operations by ensuring that collections contain documents with homogeneous security requirements. For instance, all documents in `/users/{userId}/registrations` can be listed with a rule ensuring that `request.auth.uid == userId`.  Overall, this structure avoids hierarchical authorization dependencies, simplifies security rules, and enables atomic operations."
   }
 }

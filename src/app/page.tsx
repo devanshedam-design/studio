@@ -40,8 +40,8 @@ export default function Home() {
             <line x1="12" y1="22.08" x2="12" y2="12"></line>
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-primary">ClubHive</h1>
-        <p className="text-muted-foreground">Loading your hive...</p>
+        <h1 className="text-2xl font-bold text-primary">IARE Clubs</h1>
+        <p className="text-muted-foreground">Loading...</p>
         <Skeleton className="h-4 w-48 mx-auto" />
       </div>
     </div>

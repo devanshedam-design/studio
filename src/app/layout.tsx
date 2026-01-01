@@ -5,8 +5,8 @@ import './globals.css';
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'ClubHive - College Club Event Management',
-  description: 'A smart college club event management platform.',
+  title: 'IARE Clubs - College Club Event Management',
+  description: 'A smart college club event management platform for IARE.',
 };
 
 export default function RootLayout({

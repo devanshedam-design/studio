@@ -1,5 +1,5 @@
 /**
- * # Firestore Security Rules for ClubHive
+ * # Firestore Security Rules for IARE Clubs
  *
  * ## Core Philosophy
  * This ruleset enforces a security model based on user ownership and a distinct "Club Admin" role, supplemented by a global system administrator. The model is designed for security and scalability, ensuring users can only access their own private data while allowing for controlled management of shared resources like clubs and events.

@@ -25,7 +25,7 @@ export default function AuthLayout({
                     <line x1="12" y1="22.08" x2="12" y2="12"></line>
                 </svg>
                 <h1 className="text-4xl font-bold text-primary tracking-tighter">
-                    ClubHive
+                    IARE Clubs
                 </h1>
             </div>
             <p className="text-muted-foreground">Your campus life, connected.</p>
