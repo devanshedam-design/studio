@@ -6,14 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, CheckCircle, Ticket, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, Timestamp, getDocs, addDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, collection, query, where, Timestamp, getDocs, addDoc, updateDoc, getDoc, writeBatch } from 'firebase/firestore';
 import type { ClubEvent, Club, Registration } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EventDetailPage({ params }: { params: { id: string } }) {
+    const { id: eventId } = params;
     const { user } = useAuth();
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -23,15 +24,15 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     const [event, setEvent] = useState<ClubEvent | null>(null);
     const [loadingEvent, setLoadingEvent] = useState(true);
 
-    // This query is inefficient. It scans all clubs for the event.
-    // A better approach would be a top-level `events` collection if this query is frequent.
-    // For now, we will query all `events` subcollections.
     useEffect(() => {
         const findEvent = async () => {
+            if (!eventId) return;
             setLoadingEvent(true);
+            
+            // This is still inefficient, but necessary for the current data model
             const clubsSnapshot = await getDocs(collection(firestore, 'clubs'));
             for (const clubDoc of clubsSnapshot.docs) {
-                const eventRef = doc(firestore, 'clubs', clubDoc.id, 'events', params.id);
+                const eventRef = doc(firestore, 'clubs', clubDoc.id, 'events', eventId);
                 const eventSnap = await getDoc(eventRef);
                 if (eventSnap.exists()) {
                     setEvent({ id: eventSnap.id, ...eventSnap.data() } as ClubEvent);
@@ -41,7 +42,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
             setLoadingEvent(false);
         }
         findEvent();
-    }, [firestore, params.id]);
+    }, [firestore, eventId]);
     
     const clubRef = useMemoFirebase(() => event ? doc(firestore, 'clubs', event.clubId) : null, [firestore, event]);
     const { data: club, isLoading: loadingClub } = useDoc<Club>(clubRef);
@@ -51,13 +52,9 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         return query(collection(firestore, 'users', user.id, 'registrations'), where('eventId', '==', event.id));
     }, [firestore, user, event]);
     const { data: registrations, isLoading: loadingRegistrations } = useCollection<Registration>(registrationsQuery);
-
-    // This is not scalable as it queries all users' registrations
-    // A better approach would be a top-level collection of registrations grouped by eventId
+    
     const attendeesQuery = useMemoFirebase(() => {
         if (!event) return null;
-        // This is a placeholder query that does nothing useful, just to avoid errors.
-        // A real implementation would query a different collection.
         return query(collection(firestore, 'registrations'), where('eventId', '==', event.id));
     }, [firestore, event]);
     const { data: attendees } = useCollection(attendeesQuery);
@@ -72,21 +69,33 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
 
     const handleRegister = async () => {
         if (user && event) {
-            const newRegistrationData = {
-                userId: user.id,
-                eventId: event.id,
-                registrationDate: Timestamp.now(),
-                qrCode: `user:${user.id},event:${event.id}`
-            };
-            const registrationsCol = collection(firestore, 'users', user.id, 'registrations');
-            const docRef = await addDoc(registrationsCol, newRegistrationData);
-            await updateDoc(docRef, {id: docRef.id});
+            try {
+                const batch = writeBatch(firestore);
+                const newRegistrationRef = doc(collection(firestore, 'users', user.id, 'registrations'));
+                
+                batch.set(newRegistrationRef, {
+                    id: newRegistrationRef.id,
+                    userId: user.id,
+                    eventId: event.id,
+                    registrationDate: Timestamp.now(),
+                    qrCode: `user:${user.id},event:${event.id}`
+                });
 
-            setIsRegistered(true);
-            toast({
-                title: 'Registration Successful!',
-                description: `You're all set for ${event.name}.`,
-            });
+                await batch.commit();
+
+                setIsRegistered(true);
+                toast({
+                    title: 'Registration Successful!',
+                    description: `You're all set for ${event.name}.`,
+                });
+            } catch (error) {
+                console.error("Registration failed: ", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Registration Failed',
+                    description: 'Could not complete your registration. Please try again.',
+                });
+            }
         }
     };
     

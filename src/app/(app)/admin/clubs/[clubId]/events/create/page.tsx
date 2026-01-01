@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, doc, addDoc, Timestamp, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { EventFormSchema, type EventFormValues, type Club } from '@/lib/types';
@@ -22,12 +22,13 @@ import { format } from "date-fns"
 
 
 export default function CreateEventPage({ params }: { params: { clubId: string } }) {
+    const { clubId } = params;
     const { user } = useAuth();
     const firestore = useFirestore();
     const router = useRouter();
     const { toast } = useToast();
 
-    const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', params.clubId), [firestore, params.clubId]);
+    const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', clubId), [firestore, clubId]);
     const { data: club, isLoading: clubLoading } = useDoc<Club>(clubRef);
 
     const form = useForm<EventFormValues>({
@@ -51,24 +52,25 @@ export default function CreateEventPage({ params }: { params: { clubId: string }
         }
 
         try {
-            const eventsCollection = collection(firestore, 'clubs', params.clubId, 'events');
+            const eventsCollection = collection(firestore, 'clubs', clubId, 'events');
             const bannerUrl = PlaceHolderImages.find(p => p.id === 'event-1')?.imageUrl || `https://picsum.photos/seed/${new Date().getTime()}/800/450`;
             
+            const newEventRef = doc(eventsCollection);
             const newEventData = {
                 ...values,
-                clubId: params.clubId,
+                id: newEventRef.id,
+                clubId: clubId,
                 dateTime: Timestamp.fromDate(values.dateTime),
                 bannerUrl,
             };
 
-            const docRef = await addDoc(eventsCollection, newEventData);
-            await updateDoc(docRef, { id: docRef.id });
+            await addDoc(eventsCollection, newEventData);
 
             toast({
                 title: 'Event Created!',
                 description: `"${values.name}" has been scheduled.`,
             });
-            router.push(`/admin/clubs/${params.clubId}`);
+            router.push(`/admin/clubs/${clubId}`);
 
         } catch (error: any) {
             console.error("Error creating event: ", error);

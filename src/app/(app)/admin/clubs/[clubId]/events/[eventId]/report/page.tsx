@@ -10,8 +10,9 @@ import { doc } from 'firebase/firestore';
 import type { ClubEvent } from '@/lib/types';
 
 export default function ReportPage({ params }: { params: { clubId: string, eventId: string } }) {
+    const { clubId, eventId } = params;
     const firestore = useFirestore();
-    const eventRef = useMemoFirebase(() => doc(firestore, 'clubs', params.clubId, 'events', params.eventId), [firestore, params]);
+    const eventRef = useMemoFirebase(() => doc(firestore, 'clubs', clubId, 'events', eventId), [firestore, clubId, eventId]);
     const { data: event, isLoading: eventLoading } = useDoc<ClubEvent>(eventRef);
 
     const [report, setReport] = useState<string | undefined>(event?.report);
@@ -28,7 +29,7 @@ export default function ReportPage({ params }: { params: { clubId: string, event
      
     const handleGenerateReport = async () => {
         setIsLoading(true);
-        const result = await generateReportAction(params.eventId);
+        const result = await generateReportAction(clubId, eventId);
         if (result.success && result.report) {
             setReport(result.report);
             toast({

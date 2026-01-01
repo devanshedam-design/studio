@@ -18,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, PlusCircle, FileText, Edit, Trash2, UserPlus, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where, getDocs, addDoc, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs, addDoc, deleteDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Club, ClubEvent, ClubMembership, UserProfile } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -39,12 +39,12 @@ function MembersTab({ clubId }: { clubId: string }) {
     const memberIds = useMemo(() => memberships?.map(m => m.userId) || [], [memberships]);
 
     useEffect(() => {
-        if (!loadingMemberships && memberIds.length > 0) {
+        if (!loadingMemberships && memberships && memberIds.length > 0) {
             const usersQuery = query(collection(firestore, 'users'), where('id', 'in', memberIds));
             getDocs(usersQuery).then(userSnaps => {
                 const userProfiles = userSnaps.docs.map(d => d.data() as UserProfile);
                 const membersWithId = userProfiles.map(u => {
-                    const membership = memberships?.find(m => m.userId === u.id);
+                    const membership = memberships.find(m => m.userId === u.id);
                     return { ...u, membershipId: membership?.id || '' };
                 });
                 setMembers(membersWithId);
@@ -64,22 +64,27 @@ function MembersTab({ clubId }: { clubId: string }) {
             const userSnapshot = await getDocs(userQuery);
             if (userSnapshot.empty) {
                 toast({ variant: 'destructive', title: 'User not found.', description: `No user with email ${email} exists.` });
+                setIsAdding(false);
                 return;
             }
             const userToAdd = userSnapshot.docs[0].data() as UserProfile;
 
             if (memberIds.includes(userToAdd.id)) {
                 toast({ variant: 'destructive', title: 'User is already a member.' });
+                setIsAdding(false);
                 return;
             }
-
-            const newMembership = {
+            
+            const batch = writeBatch(firestore);
+            const newMembershipRef = doc(collection(firestore, 'clubMemberships'));
+            batch.set(newMembershipRef, {
+                id: newMembershipRef.id,
                 userId: userToAdd.id,
                 clubId: clubId,
                 joinDate: serverTimestamp(),
-            };
-            const docRef = await addDoc(collection(firestore, 'clubMemberships'), newMembership);
-            await updateDoc(docRef, { id: docRef.id });
+            });
+
+            await batch.commit();
 
             toast({ title: 'Member added!', description: `${userToAdd.firstName} has been added to the club.` });
             setEmail('');
@@ -167,15 +172,16 @@ function MembersTab({ clubId }: { clubId: string }) {
 }
 
 export default function AdminClubPage({ params }: { params: { clubId: string } }) {
+    const { clubId } = params;
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', params.clubId), [firestore, params.clubId]);
+    const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', clubId), [firestore, clubId]);
     const { data: club, isLoading: clubLoading } = useDoc<Club>(clubRef);
     
-    const eventsQuery = useMemoFirebase(() => query(collection(firestore, 'clubs', params.clubId, 'events')), [firestore, params.clubId]);
+    const eventsQuery = useMemoFirebase(() => query(collection(firestore, 'clubs', clubId, 'events')), [firestore, clubId]);
     const { data: events, isLoading: eventsLoading } = useCollection<ClubEvent>(eventsQuery);
 
     useEffect(() => {
@@ -186,7 +192,7 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
 
     const handleDeleteEvent = async (eventId: string) => {
         try {
-            await deleteDoc(doc(firestore, 'clubs', params.clubId, 'events', eventId));
+            await deleteDoc(doc(firestore, 'clubs', clubId, 'events', eventId));
             toast({ title: "Event Deleted", description: "The event has been successfully removed." });
         } catch (error: any) {
             toast({ variant: "destructive", title: "Error deleting event", description: error.message });
@@ -307,7 +313,7 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                     </Card>
                 </TabsContent>
                 <TabsContent value="members">
-                    <MembersTab clubId={params.clubId} />
+                    <MembersTab clubId={clubId} />
                 </TabsContent>
             </Tabs>
         </div>

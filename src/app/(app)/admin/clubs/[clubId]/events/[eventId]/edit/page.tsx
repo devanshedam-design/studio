@@ -21,12 +21,13 @@ import { format } from "date-fns"
 import React from 'react';
 
 export default function EditEventPage({ params }: { params: { clubId: string, eventId: string } }) {
+    const { clubId, eventId } = params;
     const { user } = useAuth();
     const firestore = useFirestore();
     const router = useRouter();
     const { toast } = useToast();
 
-    const eventRef = useMemoFirebase(() => doc(firestore, 'clubs', params.clubId, 'events', params.eventId), [firestore, params.clubId, params.eventId]);
+    const eventRef = useMemoFirebase(() => doc(firestore, 'clubs', clubId, 'events', eventId), [firestore, clubId, eventId]);
     const { data: event, isLoading: eventLoading } = useDoc<ClubEvent>(eventRef);
 
     const form = useForm<EventFormValues>({
@@ -51,7 +52,7 @@ export default function EditEventPage({ params }: { params: { clubId: string, ev
         }
 
         try {
-            const eventDocRef = doc(firestore, 'clubs', params.clubId, 'events', params.eventId);
+            const eventDocRef = doc(firestore, 'clubs', clubId, 'events', eventId);
             await updateDoc(eventDocRef, {
                 ...values,
                 dateTime: Timestamp.fromDate(values.dateTime),
@@ -61,7 +62,7 @@ export default function EditEventPage({ params }: { params: { clubId: string, ev
                 title: 'Event Updated!',
                 description: `"${values.name}" has been successfully updated.`,
             });
-            router.push(`/admin/clubs/${params.clubId}`);
+            router.push(`/admin/clubs/${clubId}`);
 
         } catch (error: any) {
             console.error("Error updating event: ", error);

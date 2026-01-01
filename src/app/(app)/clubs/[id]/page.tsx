@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, addDoc, getDocs, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, addDoc, getDocs, deleteDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Club, ClubEvent, ClubMembership, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,22 +21,22 @@ function MemberList({ clubId }: { clubId: string }) {
     const [loading, setLoading] = useState(true);
 
     const membershipsQuery = useMemoFirebase(() => query(collection(firestore, 'clubMemberships'), where('clubId', '==', clubId)), [firestore, clubId]);
-    const { data: memberships } = useCollection<ClubMembership>(membershipsQuery);
+    const { data: memberships, isLoading: loadingMemberships } = useCollection<ClubMembership>(membershipsQuery);
     
-    const memberIds = useMemoFirebase(() => memberships?.map(m => m.userId) || [], [memberships]);
+    const memberIds = useMemo(() => memberships?.map(m => m.userId) || [], [memberships]);
 
     useEffect(() => {
-        if (memberIds.length > 0) {
+        if (!loadingMemberships && memberIds.length > 0) {
             const usersQuery = query(collection(firestore, 'users'), where('id', 'in', memberIds));
             getDocs(usersQuery).then(userSnaps => {
                 setMembers(userSnaps.docs.map(d => d.data() as UserProfile));
                 setLoading(false);
             });
-        } else {
+        } else if (!loadingMemberships) {
             setMembers([]);
             setLoading(false);
         }
-    }, [memberIds, firestore]);
+    }, [memberIds, loadingMemberships, firestore]);
 
     if (loading) {
         return <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
@@ -103,6 +103,7 @@ function EventList({ clubId }: { clubId: string }) {
 
 
 export default function ClubDetailPage({ params }: { params: { id: string } }) {
+    const { id } = params;
     const { user, loading: authLoading } = useAuth();
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -111,7 +112,7 @@ export default function ClubDetailPage({ params }: { params: { id: string } }) {
     const [membershipId, setMembershipId] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', params.id), [firestore, params.id]);
+    const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', id), [firestore, id]);
     const { data: club, isLoading: clubLoading } = useDoc<Club>(clubRef);
 
     const membershipQuery = useMemoFirebase(() => {
@@ -135,13 +136,15 @@ export default function ClubDetailPage({ params }: { params: { id: string } }) {
         if (!user || !club) return;
         setIsProcessing(true);
         try {
-            const newMembership = {
-                userId: user.id,
-                clubId: club.id,
-                joinDate: serverTimestamp(),
-            };
-            const docRef = await addDoc(collection(firestore, 'clubMemberships'), newMembership);
-            await updateDoc(docRef, { id: docRef.id });
+            const newMembershipRef = doc(collection(firestore, 'clubMemberships'));
+            await writeBatch(firestore)
+                .set(newMembershipRef, {
+                    id: newMembershipRef.id,
+                    userId: user.id,
+                    clubId: club.id,
+                    joinDate: serverTimestamp(),
+                })
+                .commit();
 
             toast({ title: "Welcome to the club!", description: `You've successfully joined ${club.name}.` });
         } catch (e: any) {
