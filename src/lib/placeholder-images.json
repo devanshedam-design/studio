@@ -1,3 +1,58 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user1-avatar",
+      "description": "Avatar for Alice Johnson",
+      "imageUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d29tYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjcyMzI3Mjl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman portrait"
+    },
+    {
+      "id": "user2-avatar",
+      "description": "Avatar for Bob Williams",
+      "imageUrl": "https://images.unsplash.com/photo-1607031542107-f6f46b5d54e9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxtYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjcyMjcxOTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man portrait"
+    },
+    {
+      "id": "user3-avatar",
+      "description": "Avatar for Charlie Brown",
+      "imageUrl": "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjcxOTE0ODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "club1-logo",
+      "description": "Logo for AI & Robotics Club",
+      "imageUrl": "https://images.unsplash.com/photo-1759395162881-83fda11c014f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxyb2JvdCUyMHRlY2hub2xvZ3l8ZW58MHx8fHwxNzY3MjEzODY3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "robot technology"
+    },
+    {
+      "id": "club2-logo",
+      "description": "Logo for Coding Hub",
+      "imageUrl": "https://images.unsplash.com/photo-1765445666054-b039548214d4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjb2RlJTIwYWJzdHJhY3R8ZW58MHx8fHwxNzY3Mjc4NTUyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "code abstract"
+    },
+    {
+      "id": "event1-banner",
+      "description": "Banner for Intro to Machine Learning Workshop",
+      "imageUrl": "https://images.unsplash.com/photo-1526925539332-aa3b66e35444?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxtYWNoaW5lJTIwbGVhcm5pbmd8ZW58MHx8fHwxNzY3MjU1ODQzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "machine learning"
+    },
+    {
+      "id": "event2-banner",
+      "description": "Banner for Annual Robotics Competition",
+      "imageUrl": "https://images.unsplash.com/photo-1592281766991-e3ad2dca438d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxyb2JvdCUyMGNvbXBldGl0aW9ufGVufDB8fHx8MTc2NzI4MjMzNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "robot competition"
+    },
+    {
+      "id": "event3-banner",
+      "description": "Banner for Hackathon Prep Session",
+      "imageUrl": "https://images.unsplash.com/photo-1731160807880-daf859b64420?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxoYWNrYXRob24lMjBwZW9wbGV8ZW58MHx8fHwxNzY3MjUzNTE5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "hackathon people"
+    },
+    {
+      "id": "event4-banner",
+      "description": "Banner for Past AI Seminar",
+      "imageUrl": "https://images.unsplash.com/photo-1764471444363-e6dc0f9773bc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzZW1pbmFyJTIwY29uZmVyZW5jZXxlbnwwfHx8fDE3NjcyODIzMzR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "seminar conference"
+    }
+  ]
 }
