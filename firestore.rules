@@ -69,6 +69,16 @@ service cloud.firestore {
     function isClubAdmin(clubId) {
       return isSignedIn() && get(/databases/$(database)/documents/clubs/$(clubId)).data.adminId == request.auth.uid;
     }
+    
+    /**
+     * Checks if the user is a member of the club.
+     * This requires one 'get' call to the clubMemberships collection.
+     */
+    function isClubMember(clubId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/clubMemberships/{membershipId})
+        && get(/databases/$(database)/documents/clubMemberships/{membershipId}).data.userId == request.auth.uid
+        && get(/databases/$(database)/documents/clubMemberships/{membershipId}).data.clubId == clubId;
+    }
 
     /**
      * Checks for club admin role on an existing document. Used for update/delete.
@@ -167,6 +177,16 @@ service cloud.firestore {
           allow update: if isExistingClubAdmin(clubId) || isAdmin();
           allow delete: if isExistingClubAdmin(clubId) || isAdmin();
         }
+      }
+       /**
+       * @description Announcements are readable by club members, and managed by the parent club's admin.
+       * @path /clubs/{clubId}/announcements/{announcementId}
+       */
+      match /announcements/{announcementId} {
+        // Any signed-in user who is a member of the club can read announcements. Admins can also read.
+        allow get, list: if isClubMember(clubId) || isClubAdmin(clubId) || isAdmin();
+        // Only club admins or global admins can create, update, or delete announcements.
+        allow create, update, delete: if isClubAdmin(clubId) || isAdmin();
       }
     }
 

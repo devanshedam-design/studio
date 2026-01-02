@@ -256,6 +256,42 @@
         "userId",
         "clubId"
       ]
+    },
+    "Announcement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Announcement",
+      "type": "object",
+      "description": "Represents an announcement made by a club admin.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Announcement entity."
+        },
+        "clubId": {
+          "type": "string",
+          "description": "The ID of the club making the announcement."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the announcement."
+        },
+        "content": {
+          "type": "string",
+          "description": "The content body of the announcement."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the announcement was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "clubId",
+        "title",
+        "content",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -313,6 +349,26 @@
             {
               "name": "eventId",
               "description": "The unique identifier of the event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "clubs/{clubId}/announcements/{announcementId}",
+        "definition": {
+          "entityName": "Announcement",
+          "schema": {
+            "$ref": "#/backend/entities/Announcement"
+          },
+          "description": "Stores announcements for a specific club. Authorization: Club admins can manage announcements. Club members can read them.",
+          "params": [
+            {
+              "name": "clubId",
+              "description": "The unique identifier of the club."
+            },
+            {
+              "name": "announcementId",
+              "description": "The unique identifier of the announcement."
             }
           ]
         }

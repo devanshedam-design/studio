@@ -1,6 +1,6 @@
 'use client';
 
-import type { Club, ClubMembership } from '@/lib/types';
+import type { Club, ClubMembership, Registration } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -24,6 +24,19 @@ function ClubCard({ club, isMember }: { club: Club, isMember: boolean }) {
     }, [firestore, club.id]);
     const { data: upcomingEvents, isLoading: eventsLoading } = useCollection(eventsQuery);
 
+    const allEventIds = useMemo(() => upcomingEvents?.map(e => e.id) || [], [upcomingEvents]);
+    
+    const registrationsQuery = useMemoFirebase(() => {
+        if(allEventIds.length === 0) return null;
+        return query(collection(firestore, 'registrations'), where('eventId', 'in', allEventIds));
+    }, [firestore, allEventIds]);
+    const { data: registrations } = useCollection<Registration>(registrationsQuery);
+
+    const rsvpCount = useMemo(() => {
+        return registrations?.length || 0;
+    }, [registrations]);
+
+
     return (
         <Link href={`/clubs/${club.id}`} className="block h-full">
             <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:border-primary/50 group h-full flex flex-col">
@@ -44,13 +57,13 @@ function ClubCard({ club, isMember }: { club: Club, isMember: boolean }) {
                     <CardDescription className="flex-grow">{club.description}</CardDescription>
                      <div className="flex justify-between items-center mt-4 text-sm text-muted-foreground border-t pt-4">
                         <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2" title={`${members?.length} members`}>
                                 <Users className="h-4 w-4" />
-                                <span>{members?.length ?? '...'} Members</span>
+                                <span>{members?.length ?? '...'}</span>
                             </div>
-                             <div className="flex items-center gap-2">
+                             <div className="flex items-center gap-2" title={`${rsvpCount} RSVPs`}>
                                 <Calendar className="h-4 w-4" />
-                                <span>{upcomingEvents?.length ?? '...'} Events</span>
+                                <span>{rsvpCount ?? '...'}</span>
                             </div>
                         </div>
                          {isMember && (

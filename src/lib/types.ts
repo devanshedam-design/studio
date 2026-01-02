@@ -1,6 +1,7 @@
 'use client';
 
 import type { Timestamp } from 'firebase/firestore';
+import { z } from 'zod';
 
 export type UserProfile = {
     id: string;
@@ -59,7 +60,6 @@ export type Announcement = {
 };
 
 // Form schemas
-import { z } from 'zod';
 
 export const ClubFormSchema = z.object({
   name: z.string().min(3, { message: "Club name must be at least 3 characters." }),
@@ -73,5 +73,11 @@ export const EventFormSchema = z.object({
     dateTime: z.date({ required_error: "A date and time is required."}),
 });
 
+export const AnnouncementFormSchema = z.object({
+    title: z.string().min(3, { message: "Title must be at least 3 characters." }),
+    content: z.string().min(10, { message: "Content must be at least 10 characters." }),
+});
+
 export type ClubFormValues = z.infer<typeof ClubFormSchema>;
 export type EventFormValues = z.infer<typeof EventFormSchema>;
+export type AnnouncementFormValues = z.infer<typeof AnnouncementFormSchema>;

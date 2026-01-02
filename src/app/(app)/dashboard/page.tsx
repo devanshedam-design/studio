@@ -3,8 +3,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, collection, query, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import React from 'react';
+import type { Club, ClubMembership } from '@/lib/types';
+import Link from 'next/link';
 
 const ProfileFormSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -23,6 +25,49 @@ const ProfileFormSchema = z.object({
 });
 
 type ProfileFormValues = z.infer<typeof ProfileFormSchema>;
+
+function JoinedClubsList({ userId }: { userId: string }) {
+    const firestore = useFirestore();
+    
+    const membershipsQuery = useMemoFirebase(() => query(collection(firestore, 'clubMemberships'), where('userId', '==', userId)), [firestore, userId]);
+    const { data: memberships, isLoading: loadingMemberships } = useCollection<ClubMembership>(membershipsQuery);
+
+    const myClubIds = React.useMemo(() => memberships?.map(m => m.clubId) || [], [memberships]);
+
+    const clubsQuery = useMemoFirebase(() => {
+        if (myClubIds.length === 0) return null;
+        return query(collection(firestore, 'clubs'), where('id', 'in', myClubIds));
+    }, [firestore, myClubIds]);
+    const { data: clubs, isLoading: loadingClubs } = useCollection<Club>(clubsQuery);
+
+    if (loadingMemberships || loadingClubs) {
+        return <p>Loading your clubs...</p>;
+    }
+
+    return (
+         <Card>
+            <CardHeader>
+                <CardTitle>My Clubs</CardTitle>
+                <CardDescription>Clubs you are a member of.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {clubs && clubs.length > 0 ? (
+                    <div className="space-y-2">
+                        {clubs.map(club => (
+                            <Link href={`/clubs/${club.id}`} key={club.id} className="block">
+                                <div className="p-3 rounded-md border hover:bg-secondary transition-colors">
+                                    {club.name}
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-muted-foreground">You haven't joined any clubs yet.</p>
+                )}
+            </CardContent>
+        </Card>
+    )
+}
 
 export default function ProfilePage() {
     const { user } = useAuth();
@@ -92,7 +137,7 @@ export default function ProfilePage() {
     ];
 
     return (
-        <div className="container mx-auto max-w-2xl">
+        <div className="container mx-auto max-w-4xl space-y-8">
             <Card>
                 <CardHeader>
                     <CardTitle className="text-2xl md:text-3xl">My Profile</CardTitle>
@@ -149,7 +194,7 @@ export default function ProfilePage() {
                                     render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Department</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                                         <FormControl>
                                             <SelectTrigger>
                                             <SelectValue placeholder="Select your department" />
@@ -169,7 +214,7 @@ export default function ProfilePage() {
                                     render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Year of Study</FormLabel>
-                                        <Select onValueChange={(val) => field.onChange(Number(val))} defaultValue={String(field.value)}>
+                                        <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)} defaultValue={String(field.value)}>
                                         <FormControl>
                                             <SelectTrigger>
                                             <SelectValue placeholder="Select your year" />
@@ -198,6 +243,8 @@ export default function ProfilePage() {
                     </Form>
                 </CardContent>
             </Card>
+
+            <JoinedClubsList userId={user.id} />
         </div>
     );
 }

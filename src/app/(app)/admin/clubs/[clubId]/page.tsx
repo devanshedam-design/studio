@@ -15,15 +15,131 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, FileText, Edit, Trash2, UserPlus, X, Loader2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, FileText, Edit, Trash2, UserPlus, X, Loader2, Megaphone } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where, getDocs, addDoc, deleteDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
-import type { Club, ClubEvent, ClubMembership, UserProfile } from '@/lib/types';
+import { collection, doc, query, where, getDocs, addDoc, deleteDoc, serverTimestamp, updateDoc, writeBatch, Timestamp, orderBy } from 'firebase/firestore';
+import type { Club, ClubEvent, ClubMembership, UserProfile, Announcement } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { AnnouncementFormSchema, type AnnouncementFormValues } from '@/lib/types';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
 
+
+function AnnouncementsTab({ clubId }: { clubId: string }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    
+    const announcementsQuery = useMemoFirebase(() => query(collection(firestore, 'clubs', clubId, 'announcements'), orderBy('createdAt', 'desc')), [firestore, clubId]);
+    const { data: announcements, isLoading } = useCollection<Announcement>(announcementsQuery);
+    
+    const form = useForm<AnnouncementFormValues>({
+        resolver: zodResolver(AnnouncementFormSchema),
+        defaultValues: { title: '', content: '' },
+    });
+
+    const onSubmit = async (values: AnnouncementFormValues) => {
+        try {
+            const newAnnouncementRef = doc(collection(firestore, 'clubs', clubId, 'announcements'));
+            await addDoc(collection(firestore, 'clubs', clubId, 'announcements'), {
+                id: newAnnouncementRef.id,
+                clubId,
+                ...values,
+                createdAt: serverTimestamp(),
+            });
+            toast({ title: 'Announcement Posted!' });
+            form.reset();
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Error posting announcement', description: e.message });
+        }
+    };
+    
+     const handleDelete = async (announcementId: string) => {
+        try {
+            await deleteDoc(doc(firestore, 'clubs', clubId, 'announcements', announcementId));
+            toast({ title: 'Announcement Deleted' });
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Error deleting announcement', description: e.message });
+        }
+    };
+
+    return (
+         <div className="grid md:grid-cols-3 gap-8">
+            <div className="md:col-span-1">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>New Announcement</CardTitle>
+                        <CardDescription>Post an update to your club members.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                <FormField control={form.control} name="title" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Title</FormLabel>
+                                        <FormControl><Input {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <FormField control={form.control} name="content" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Content</FormLabel>
+                                        <FormControl><Textarea {...field} rows={6} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )} />
+                                <Button type="submit" disabled={form.formState.isSubmitting}>
+                                    {form.formState.isSubmitting ? <Loader2 className="animate-spin" /> : 'Post'}
+                                </Button>
+                            </form>
+                        </Form>
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="md:col-span-2">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Posted Announcements</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                         {isLoading ? <p>Loading...</p> : announcements && announcements.length > 0 ? (
+                            <div className="space-y-4">
+                                {announcements.map(ann => (
+                                    <div key={ann.id} className="p-4 border rounded-md relative group">
+                                        <h4 className="font-bold">{ann.title}</h4>
+                                        <p className="text-sm text-muted-foreground">{ann.createdAt.toDate().toLocaleString()}</p>
+                                        <p className="mt-2 whitespace-pre-wrap">{ann.content}</p>
+                                         <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Trash2 className="h-4 w-4 text-destructive"/>
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader><AlertDialogTitle>Delete this announcement?</AlertDialogTitle></AlertDialogHeader>
+                                                <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(ann.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-center text-muted-foreground py-8">No announcements posted yet.</p>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    )
+}
 
 function MembersTab({ clubId }: { clubId: string }) {
     const firestore = useFirestore();
@@ -32,6 +148,7 @@ function MembersTab({ clubId }: { clubId: string }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
     const [email, setEmail] = useState('');
+    const [searchTerm, setSearchTerm] = React.useState('');
 
     const membershipsQuery = useMemoFirebase(() => query(collection(firestore, 'clubMemberships'), where('clubId', '==', clubId)), [firestore, clubId]);
     const { data: memberships, isLoading: loadingMemberships, error } = useCollection<ClubMembership>(membershipsQuery);
@@ -39,7 +156,7 @@ function MembersTab({ clubId }: { clubId: string }) {
     const memberIds = useMemo(() => memberships?.map(m => m.userId) || [], [memberships]);
 
     useEffect(() => {
-        if (!loadingMemberships && memberships && memberIds.length > 0) {
+        if (!loadingMemberships && memberIds.length > 0) {
             const usersQuery = query(collection(firestore, 'users'), where('id', 'in', memberIds));
             getDocs(usersQuery).then(userSnaps => {
                 const userProfiles = userSnaps.docs.map(d => d.data() as UserProfile);
@@ -55,6 +172,15 @@ function MembersTab({ clubId }: { clubId: string }) {
             setIsLoading(false);
         }
     }, [memberIds, memberships, loadingMemberships, firestore]);
+    
+    const filteredMembers = useMemo(() => {
+        if (!members) return [];
+        return members.filter(u => 
+            u.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.email.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [members, searchTerm]);
 
     const handleAddMember = async () => {
         if (!email) return;
@@ -109,14 +235,22 @@ function MembersTab({ clubId }: { clubId: string }) {
             <CardHeader>
                 <CardTitle>Club Members</CardTitle>
                 <CardDescription>Add or remove members from your club. There are currently {members.length} members.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="flex gap-2 mb-6 pb-6 border-b">
-                    <Input placeholder="Enter user's email to add..." value={email} onChange={e => setEmail(e.target.value)} />
+                 <div className="pt-4 flex gap-2">
+                    <Input placeholder="Enter user's email to add..." value={email} onChange={e => setEmail(e.target.value)} className="max-w-sm"/>
                     <Button onClick={handleAddMember} disabled={isAdding}>
-                        {isAdding ? <Loader2 className="mr-2 animate-spin"/> : <UserPlus className="mr-2"/>}
+                        {isAdding ? <Loader2 className="animate-spin"/> : <UserPlus />}
                          Add Member
                     </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="mb-4">
+                    <Input 
+                        placeholder="Search members..." 
+                        value={searchTerm} 
+                        onChange={(e) => setSearchTerm(e.target.value)} 
+                        className="max-w-sm"
+                    />
                 </div>
                 <Table>
                     <TableHeader>
@@ -130,8 +264,8 @@ function MembersTab({ clubId }: { clubId: string }) {
                     <TableBody>
                         {isLoading ? (
                             <TableRow><TableCell colSpan={4} className="text-center h-24">Loading members...</TableCell></TableRow>
-                        ) : members.length > 0 ? (
-                            members.map(member => (
+                        ) : filteredMembers.length > 0 ? (
+                            filteredMembers.map(member => (
                                 <TableRow key={member.id}>
                                     <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
                                     <TableCell>{member.email}</TableCell>
@@ -162,7 +296,7 @@ function MembersTab({ clubId }: { clubId: string }) {
                                 </TableRow>
                             ))
                         ) : (
-                             <TableRow><TableCell colSpan={4} className="text-center h-24">No members yet. Add one above!</TableCell></TableRow>
+                             <TableRow><TableCell colSpan={4} className="text-center h-24">No members found.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -220,9 +354,10 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
             </div>
             
             <Tabs defaultValue="events" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="events">Events</TabsTrigger>
                     <TabsTrigger value="members">Members</TabsTrigger>
+                    <TabsTrigger value="announcements">Announcements</TabsTrigger>
                 </TabsList>
                 <TabsContent value="events">
                      <Card>
@@ -314,6 +449,9 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                 </TabsContent>
                 <TabsContent value="members">
                     <MembersTab clubId={clubId} />
+                </TabsContent>
+                <TabsContent value="announcements">
+                    <AnnouncementsTab clubId={clubId} />
                 </TabsContent>
             </Tabs>
         </div>

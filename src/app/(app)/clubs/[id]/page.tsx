@@ -3,17 +3,44 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useDoc, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, addDoc, getDocs, deleteDoc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
-import type { Club, ClubEvent, ClubMembership, UserProfile } from '@/lib/types';
+import { doc, collection, query, where, addDoc, getDocs, deleteDoc, serverTimestamp, updateDoc, writeBatch, orderBy } from 'firebase/firestore';
+import type { Club, ClubEvent, ClubMembership, UserProfile, Announcement } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { Calendar, Users, UserPlus, LogOut, Loader2, Crown } from 'lucide-react';
+import { Calendar, Users, UserPlus, LogOut, Loader2, Crown, Megaphone } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
+
+function AnnouncementList({ clubId }: { clubId: string }) {
+    const firestore = useFirestore();
+    const announcementsQuery = useMemoFirebase(() => query(collection(firestore, 'clubs', clubId, 'announcements'), orderBy('createdAt', 'desc')), [firestore, clubId]);
+    const { data: announcements, isLoading } = useCollection<Announcement>(announcementsQuery);
+
+    if (isLoading) return <p>Loading announcements...</p>;
+
+    return (
+        <div>
+            <h3 className="text-xl font-semibold mt-8 mb-4 flex items-center gap-2"><Megaphone className="h-5 w-5"/>Announcements</h3>
+            {announcements && announcements.length > 0 ? (
+                <div className="space-y-4">
+                    {announcements.map(ann => (
+                        <div key={ann.id} className="p-4 border rounded-lg bg-secondary/30">
+                            <h4 className="font-bold">{ann.title}</h4>
+                            <p className="text-xs text-muted-foreground mb-2">{ann.createdAt.toDate().toLocaleString()}</p>
+                            <p className="text-sm">{ann.content}</p>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-muted-foreground">No announcements yet.</p>
+            )}
+        </div>
+    )
+}
 
 function MemberList({ clubId }: { clubId: string }) {
     const firestore = useFirestore();
@@ -213,6 +240,7 @@ export default function ClubDetailPage({ params }: { params: { id: string } }) {
                     </div>
                 </CardHeader>
                 <CardContent className="p-4 md:p-6">
+                    {isMember && <AnnouncementList clubId={club.id} />}
                     <EventList clubId={club.id} />
                     <MemberList clubId={club.id} />
                 </CardContent>
