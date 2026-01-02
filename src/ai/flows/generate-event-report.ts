@@ -12,7 +12,9 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateEventReportInputSchema = z.object({
-  eventId: z.string().describe('The ID of the event to generate a report for.'),
+  eventName: z.string().describe('The name of the event.'),
+  eventDescription: z.string().describe('The description of the event.'),
+  attendeeCount: z.number().describe('The total number of attendees.'),
 });
 export type GenerateEventReportInput = z.infer<typeof GenerateEventReportInputSchema>;
 
@@ -29,16 +31,20 @@ const prompt = ai.definePrompt({
   name: 'generateEventReportPrompt',
   input: {schema: GenerateEventReportInputSchema},
   output: {schema: GenerateEventReportOutputSchema},
-  prompt: `You are an AI assistant that generates event reports based on event data.
+  prompt: `You are an AI assistant that generates event reports for a college club.
 
-  Given the event ID: {{{eventId}}}, generate a comprehensive report including:
-  - Attendance summary
-  - Engagement insights
-  - Department/year-wise participation analysis
-  - Key highlights and areas for improvement
-  - Recommendations for future events
+  Given the following information, generate a comprehensive report in a readable, well-formatted, and informative manner.
   
-  Format the report in a readable and informative manner.
+  Event Name: {{{eventName}}}
+  Event Description: {{{eventDescription}}}
+  Total Attendees: {{{attendeeCount}}}
+  
+  The report should include:
+  - An engaging title.
+  - A brief summary of the event's purpose.
+  - An analysis of the attendance.
+  - Potential insights into engagement (based on the description and attendance).
+  - Recommendations for future similar events.
   `,
 });
 

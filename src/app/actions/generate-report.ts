@@ -2,7 +2,7 @@
 
 import { generateEventReport } from '@/ai/flows/generate-event-report';
 import { initializeFirebase } from '@/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 export async function generateReportAction(clubId: string, eventId: string) {
     try {
@@ -15,8 +15,26 @@ export async function generateReportAction(clubId: string, eventId: string) {
             throw new Error('Event not found');
         }
 
+        const eventData = eventSnap.data();
+
+        // To get the number of attendees, we need to query the registrations.
+        // This is inefficient but necessary with the current data model.
+        let attendeeCount = 0;
+        const usersSnapshot = await getDocs(collection(firestore, 'users'));
+        for (const userDoc of usersSnapshot.docs) {
+            const registrationQuery = query(
+                collection(firestore, 'users', userDoc.id, 'registrations'),
+                where('eventId', '==', eventId)
+            );
+            const registrationSnapshot = await getDocs(registrationQuery);
+            attendeeCount += registrationSnapshot.size;
+        }
+
+
         const aiInput = {
-            eventId: eventId,
+            eventName: eventData.name,
+            eventDescription: eventData.description,
+            attendeeCount: attendeeCount,
         };
 
         const result = await generateEventReport(aiInput);
