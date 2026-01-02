@@ -235,7 +235,7 @@ function MembersTab({ clubId }: { clubId: string }) {
             <CardHeader>
                 <CardTitle>Club Members</CardTitle>
                 <CardDescription>Add or remove members from your club. There are currently {members.length} members.</CardDescription>
-                 <div className="pt-4 flex gap-2">
+                 <div className="pt-4 flex flex-col sm:flex-row gap-2">
                     <Input placeholder="Enter user's email to add..." value={email} onChange={e => setEmail(e.target.value)} className="max-w-sm"/>
                     <Button onClick={handleAddMember} disabled={isAdding}>
                         {isAdding ? <Loader2 className="animate-spin"/> : <UserPlus />}
@@ -252,54 +252,56 @@ function MembersTab({ clubId }: { clubId: string }) {
                         className="max-w-sm"
                     />
                 </div>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Department</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            <TableRow><TableCell colSpan={4} className="text-center h-24">Loading members...</TableCell></TableRow>
-                        ) : filteredMembers.length > 0 ? (
-                            filteredMembers.map(member => (
-                                <TableRow key={member.id}>
-                                    <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
-                                    <TableCell>{member.email}</TableCell>
-                                    <TableCell>{member.department || 'N/A'}</TableCell>
-                                    <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <X className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This will remove {member.firstName} from the club. This action cannot be undone.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleRemoveMember(member.membershipId, `${member.firstName} ${member.lastName}`)}>
-                                                        Remove
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                             <TableRow><TableCell colSpan={4} className="text-center h-24">No members found.</TableCell></TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Department</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                <TableRow><TableCell colSpan={4} className="text-center h-24">Loading members...</TableCell></TableRow>
+                            ) : filteredMembers.length > 0 ? (
+                                filteredMembers.map(member => (
+                                    <TableRow key={member.id}>
+                                        <TableCell className="font-medium">{member.firstName} {member.lastName}</TableCell>
+                                        <TableCell>{member.email}</TableCell>
+                                        <TableCell>{member.department || 'N/A'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <X className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This will remove {member.firstName} from the club. This action cannot be undone.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleRemoveMember(member.membershipId, `${member.firstName} ${member.lastName}`)}>
+                                                            Remove
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={4} className="text-center h-24">No members found.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </CardContent>
         </Card>
     );
@@ -340,7 +342,7 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
 
     return (
         <div className="container mx-auto">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Admin: {club.name}</h1>
                     <p className="text-muted-foreground">Manage your club's events and reports.</p>
@@ -354,7 +356,7 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
             </div>
             
             <Tabs defaultValue="events" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
                     <TabsTrigger value="events">Events</TabsTrigger>
                     <TabsTrigger value="members">Members</TabsTrigger>
                     <TabsTrigger value="announcements">Announcements</TabsTrigger>
@@ -366,84 +368,86 @@ export default function AdminClubPage({ params }: { params: { clubId: string } }
                             <CardDescription>View, edit, and generate reports for your club's events.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Event Name</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Location</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {eventsLoading ? (
-                                         <TableRow><TableCell colSpan={5} className="text-center h-24">Loading events...</TableCell></TableRow>
-                                    ) : events && events.length > 0 ? (
-                                        events.map(event => {
-                                            const isPast = event.dateTime.toDate() < new Date();
-                                            return (
-                                            <TableRow key={event.id}>
-                                                <TableCell className="font-medium">{event.name}</TableCell>
-                                                <TableCell>{event.dateTime.toDate().toLocaleDateString()}</TableCell>
-                                                <TableCell>{event.location}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={isPast ? 'outline' : 'default'}>{isPast ? 'Past' : 'Upcoming'}</Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                <span className="sr-only">Open menu</span>
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end">
-                                                            {isPast && (
-                                                            <Link href={`/admin/clubs/${club.id}/events/${event.id}/report`}>
-                                                                <DropdownMenuItem>
-                                                                    <FileText className="mr-2 h-4 w-4" />
-                                                                    <span>{event.report ? 'View' : 'Generate'} Report</span>
-                                                                </DropdownMenuItem>
-                                                            </Link>
-                                                            )}
-                                                            <Link href={`/admin/clubs/${club.id}/events/${event.id}/edit`}>
-                                                                <DropdownMenuItem>
-                                                                    <Edit className="mr-2 h-4 w-4" />
-                                                                    <span>Edit Event</span>
-                                                                </DropdownMenuItem>
-                                                            </Link>
-                                                            <AlertDialog>
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                                        <span>Delete Event</span>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Event Name</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Location</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {eventsLoading ? (
+                                            <TableRow><TableCell colSpan={5} className="text-center h-24">Loading events...</TableCell></TableRow>
+                                        ) : events && events.length > 0 ? (
+                                            events.map(event => {
+                                                const isPast = event.dateTime.toDate() < new Date();
+                                                return (
+                                                <TableRow key={event.id}>
+                                                    <TableCell className="font-medium">{event.name}</TableCell>
+                                                    <TableCell>{event.dateTime.toDate().toLocaleDateString()}</TableCell>
+                                                    <TableCell>{event.location}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={isPast ? 'outline' : 'default'}>{isPast ? 'Past' : 'Upcoming'}</Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                    <span className="sr-only">Open menu</span>
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                {isPast && (
+                                                                <Link href={`/admin/clubs/${club.id}/events/${event.id}/report`}>
+                                                                    <DropdownMenuItem>
+                                                                        <FileText className="mr-2 h-4 w-4" />
+                                                                        <span>{event.report ? 'View' : 'Generate'} Report</span>
                                                                     </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                                <AlertDialogContent>
-                                                                    <AlertDialogHeader>
-                                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                                        <AlertDialogDescription>
-                                                                            This action cannot be undone. This will permanently delete the event and all of its associated data.
-                                                                        </AlertDialogDescription>
-                                                                    </AlertDialogHeader>
-                                                                    <AlertDialogFooter>
-                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                        <AlertDialogAction onClick={() => handleDeleteEvent(event.id)}>Delete</AlertDialogAction>
-                                                                    </AlertDialogFooter>
-                                                                </AlertDialogContent>
-                                                            </AlertDialog>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </TableCell>
-                                            </TableRow>
-                                            );
-                                        })
-                                    ) : (
-                                        <TableRow><TableCell colSpan={5} className="text-center h-24">No events created yet.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                                                </Link>
+                                                                )}
+                                                                <Link href={`/admin/clubs/${club.id}/events/${event.id}/edit`}>
+                                                                    <DropdownMenuItem>
+                                                                        <Edit className="mr-2 h-4 w-4" />
+                                                                        <span>Edit Event</span>
+                                                                    </DropdownMenuItem>
+                                                                </Link>
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                                            <span>Delete Event</span>
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                This action cannot be undone. This will permanently delete the event and all of its associated data.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                            <AlertDialogAction onClick={() => handleDeleteEvent(event.id)}>Delete</AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
+                                                </TableRow>
+                                                );
+                                            })
+                                        ) : (
+                                            <TableRow><TableCell colSpan={5} className="text-center h-24">No events created yet.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>

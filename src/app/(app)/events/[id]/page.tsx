@@ -55,7 +55,8 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     
     const attendeesQuery = useMemoFirebase(() => {
         if (!event) return null;
-        return query(collection(firestore, 'registrations'), where('eventId', '==', event.id));
+        // This is inefficient but necessary for the current data model
+        return query(collection(firestore, 'users'), where('registrations', 'array-contains', event.id));
     }, [firestore, event]);
     const { data: attendees } = useCollection(attendeesQuery);
 
@@ -103,13 +104,13 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
         return (
             <div className="container mx-auto max-w-4xl">
                  <Card className="overflow-hidden">
-                    <Skeleton className="h-60 w-full" />
+                    <Skeleton className="h-48 md:h-60 w-full" />
                     <CardHeader className="relative -mt-16 z-10 p-4 md:p-6">
                         <Skeleton className="h-9 w-3/4" />
                         <Skeleton className="h-5 w-1/4 mt-2" />
                     </CardHeader>
                     <CardContent className="p-4 md:p-6 space-y-6">
-                        <div className="grid md:grid-cols-3 gap-4 text-sm">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                             <Skeleton className="h-20 w-full" />
                             <Skeleton className="h-20 w-full" />
                             <Skeleton className="h-20 w-full" />
@@ -138,7 +139,7 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
     return (
         <div className="container mx-auto max-w-4xl">
             <Card className="overflow-hidden">
-                <div className="relative h-60 w-full">
+                <div className="relative h-48 md:h-60 w-full">
                     <Image
                         src={event.bannerUrl}
                         alt={`${event.name} banner`}
@@ -148,12 +149,12 @@ export default function EventDetailPage({ params }: { params: { id: string } }) 
                     />
                     <div className="absolute inset-0 bg-black/50" />
                 </div>
-                <CardHeader className="relative -mt-20 z-10 p-4 md:p-6">
-                    <CardTitle className="text-4xl font-bold text-white drop-shadow-lg">{event.name}</CardTitle>
-                    <Link href={`/clubs/${club.id}`} className="text-primary-foreground/90 hover:text-white transition-colors text-lg">{club.name}</Link>
+                <CardHeader className="relative -mt-12 md:-mt-20 z-10 p-4 md:p-6">
+                    <CardTitle className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">{event.name}</CardTitle>
+                    <Link href={`/clubs/${club.id}`} className="text-primary-foreground/90 hover:text-white transition-colors text-md md:text-lg">{club.name}</Link>
                 </CardHeader>
                 <CardContent className="p-4 md:p-6 space-y-8">
-                    <div className="grid md:grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                         <div className="flex items-center gap-3 p-4 rounded-lg bg-secondary/70">
                             <Calendar className="h-6 w-6 text-primary" />
                             <div>

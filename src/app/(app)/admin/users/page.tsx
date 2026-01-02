@@ -80,7 +80,7 @@ export default function AllUsersPage() {
                                 ) : filteredUsers.length > 0 ? (
                                     filteredUsers.map(u => (
                                         <TableRow key={u.id}>
-                                            <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
+                                            <TableCell className="font-medium whitespace-nowrap">{u.firstName} {u.lastName}</TableCell>
                                             <TableCell>{u.email}</TableCell>
                                             <TableCell className="min-w-[200px]">{u.department || 'N/A'}</TableCell>
                                             <TableCell>{u.year || 'N/A'}</TableCell>

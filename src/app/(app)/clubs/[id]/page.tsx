@@ -80,7 +80,7 @@ function MemberList({ clubId }: { clubId: string }) {
         <div>
             <h3 className="text-xl font-semibold mt-8 mb-4">Members ({members.length})</h3>
             {members.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
                     {members.map(member => (
                         <div key={member.id} className="flex flex-col items-center text-center gap-2 p-3 rounded-lg bg-secondary/50">
                             <Avatar>
@@ -207,15 +207,15 @@ export default function ClubDetailPage({ params }: { params: { id: string } }) {
     return (
         <div className="container mx-auto">
             <Card className="overflow-hidden">
-                <div className="relative h-60 w-full">
+                <div className="relative h-48 md:h-60 w-full">
                     <Image src={club.logoUrl} alt={`${club.name} banner`} fill className="object-cover" data-ai-hint="club banner"/>
                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                 </div>
-                <CardHeader className="relative -mt-16 z-10 p-4 md:p-6">
+                <CardHeader className="relative -mt-12 md:-mt-16 z-10 p-4 md:p-6">
                     <div className="flex flex-col md:flex-row md:items-end md:justify-between">
                         <div>
-                             <CardTitle className="text-4xl font-bold text-white drop-shadow-lg">{club.name}</CardTitle>
-                             <CardDescription className="text-primary-foreground/90 text-lg">{club.description}</CardDescription>
+                             <CardTitle className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">{club.name}</CardTitle>
+                             <CardDescription className="text-primary-foreground/90 text-md md:text-lg">{club.description}</CardDescription>
                         </div>
                         <div className="mt-4 md:mt-0">
                            {isAdmin ? (
