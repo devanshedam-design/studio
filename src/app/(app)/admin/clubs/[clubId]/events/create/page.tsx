@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, doc, addDoc, Timestamp, updateDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { EventFormSchema, type EventFormValues, type Club } from '@/lib/types';
@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
+import { useMemo } from 'react';
 
 
 export default function CreateEventPage({ params }: { params: { clubId: string } }) {
@@ -30,6 +31,8 @@ export default function CreateEventPage({ params }: { params: { clubId: string }
 
     const clubRef = useMemoFirebase(() => doc(firestore, 'clubs', clubId), [firestore, clubId]);
     const { data: club, isLoading: clubLoading } = useDoc<Club>(clubRef);
+    
+    const randomImageId = useMemo(() => `event-${Math.floor(Math.random() * 3) + 1}`, []);
 
     const form = useForm<EventFormValues>({
         resolver: zodResolver(EventFormSchema),
@@ -53,7 +56,7 @@ export default function CreateEventPage({ params }: { params: { clubId: string }
 
         try {
             const eventsCollection = collection(firestore, 'clubs', clubId, 'events');
-            const bannerUrl = PlaceHolderImages.find(p => p.id === 'event-1')?.imageUrl || `https://picsum.photos/seed/${new Date().getTime()}/800/450`;
+            const bannerUrl = PlaceHolderImages.find(p => p.id === randomImageId)?.imageUrl || `https://picsum.photos/seed/${new Date().getTime()}/800/450`;
             
             const newEventRef = doc(eventsCollection);
             const newEventData = {
@@ -64,7 +67,7 @@ export default function CreateEventPage({ params }: { params: { clubId: string }
                 bannerUrl,
             };
 
-            await addDoc(eventsCollection, newEventData);
+            await setDoc(newEventRef, newEventData);
 
             toast({
                 title: 'Event Created!',
